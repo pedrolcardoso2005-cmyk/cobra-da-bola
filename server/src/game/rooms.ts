@@ -73,6 +73,9 @@ class RoomManager extends EventEmitter {
       this.dispatch(room, { type: "SET_CONNECTED", playerId: existingPlayerId, connected: true });
       return { playerId: existingPlayerId, reconnected: true };
     }
+    if (room.match.phase === "lobby" && room.match.players.length >= room.match.settings.targetCount) {
+      throw new EngineError("Sala cheia");
+    }
     const playerId = nanoid();
     room.playerIdByUserId.set(opts.userId, playerId);
     this.dispatch(room, {
@@ -91,12 +94,50 @@ class RoomManager extends EventEmitter {
         wrongAnswers: 0,
       },
     });
+    if (room.match.phase === "lobby" && room.match.players.length === room.match.settings.targetCount) {
+      this.autoStart(room);
+    }
     return { playerId, reconnected: false };
+  }
+
+  /**
+   * Server-authoritative auto-start: fires exactly once, the moment the
+   * lobby reaches its targetCount, so no human "host" has to be present
+   * to press start -- the match (and its first question) begins on its
+   * own and every player is synchronized by the same state broadcast.
+   */
+  private autoStart(room: RoomRuntime): void {
+    if (room.match.phase !== "lobby") return; // already started; never double-fire
+    this.startMatch(room.match.code);
+    if (room.match.phase === "lobby") return; // engine refused to start (shouldn't happen here)
+    try {
+      this.releaseQuestion(room.match.code);
+    } catch {
+      // No questions available for the chosen filters; the players land on
+      // the match screen and the designated host can retry manually.
+      return;
+    }
+    if (room.match.phase === "phase1" || room.match.phase === "semifinal" || room.match.phase === "final") {
+      this.armButtons(room.match.code);
+    }
   }
 
   setConnected(code: string, playerId: string, connected: boolean): void {
     const room = this.mustGet(code);
     this.dispatch(room, { type: "SET_CONNECTED", playerId, connected });
+  }
+
+  /** Voluntarily leaves the room pre-start, freeing the slot for someone else. */
+  leavePlayer(code: string, playerId: string): void {
+    const room = this.mustGet(code);
+    this.snapshot(room);
+    this.dispatch(room, { type: "LEAVE_PLAYER", playerId });
+    for (const [userId, pid] of room.playerIdByUserId) {
+      if (pid === playerId) {
+        room.playerIdByUserId.delete(userId);
+        break;
+      }
+    }
   }
 
   setTeams(code: string, assignments: Record<string, TeamKey>): void {

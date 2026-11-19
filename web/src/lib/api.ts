@@ -12,7 +12,7 @@ export class ApiError extends Error {
 }
 
 async function request<T>(path: string, opts: RequestInit = {}): Promise<T> {
-  const token = localStorage.getItem("cobra_token");
+  const token = sessionStorage.getItem("cobra_token");
   const headers: Record<string, string> = { "Content-Type": "application/json", ...(opts.headers as any) };
   if (token) headers.Authorization = `Bearer ${token}`;
   const res = await fetch(`${API_BASE}${path}`, { ...opts, headers });

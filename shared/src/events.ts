@@ -17,13 +17,15 @@ export interface ClientToServerEvents {
     ack: (res: { ok: true } | { ok: false; error: string }) => void,
   ) => void;
   "room:create": (
-    payload: { answerSeconds: AnswerSeconds; categories: QuestionCategory[]; difficulties: Difficulty[] },
+    payload: { answerSeconds: AnswerSeconds; categories: QuestionCategory[]; difficulties: Difficulty[]; targetCount: number },
     ack: (res: { ok: true; code: string } | { ok: false; error: string }) => void,
   ) => void;
   "room:setTeams": (payload: { assignments: Record<string, TeamKey>; mode: "manual" | "random" }) => void;
   "room:start": () => void;
   "room:pause": () => void;
   "room:resume": () => void;
+  /** Voluntarily leaves the room while still in the lobby, freeing the slot for someone else. */
+  "room:leave": () => void;
 
   "host:releaseQuestion": (payload: { questionId?: string }) => void;
   "host:armButtons": () => void;

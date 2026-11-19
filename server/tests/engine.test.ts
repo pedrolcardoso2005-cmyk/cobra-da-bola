@@ -29,7 +29,12 @@ function mkCareer(id = "c1"): CareerQuestion {
 }
 
 function freshMatch(n: number) {
-  let state = createInitialMatch({ id: "m1", code: "ABCDE", hostUserId: "host", settings: { answerSeconds: 10, categories: [], difficulties: [], kind: "casual" } });
+  let state = createInitialMatch({
+    id: "m1",
+    code: "ABCDE",
+    hostUserId: "host",
+    settings: { answerSeconds: 10, categories: [], difficulties: [], kind: "casual", targetCount: n },
+  });
   for (let i = 0; i < n; i++) {
     state = applyAction(state, { type: "JOIN_PLAYER", player: mkPlayer(String(i)) });
   }

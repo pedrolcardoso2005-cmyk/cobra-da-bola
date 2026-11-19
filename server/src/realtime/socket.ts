@@ -48,6 +48,7 @@ export function registerSocketHandlers(io: Server<ClientToServerEvents, ServerTo
           answerSeconds: z.number().refine((v) => (ANSWER_SECONDS_OPTIONS as number[]).includes(v)),
           categories: z.array(z.string()).min(0),
           difficulties: z.array(z.string()).min(0),
+          targetCount: z.number().int().min(2).max(12),
         });
         const parsed = schema.parse(payload);
         const room = roomManager.createRoom(socket.data.userId, {
@@ -55,6 +56,7 @@ export function registerSocketHandlers(io: Server<ClientToServerEvents, ServerTo
           categories: parsed.categories as any,
           difficulties: parsed.difficulties as any,
           kind: "casual",
+          targetCount: parsed.targetCount,
         });
         ack({ ok: true, code: room.match.code });
       } catch (err) {
@@ -90,6 +92,12 @@ export function registerSocketHandlers(io: Server<ClientToServerEvents, ServerTo
           });
           socket.data.playerId = playerId;
           socket.join(`${room.match.code}:player:${playerId}`);
+          // The room's creator judges from their own player screen (no
+          // separate presenter tab required), so also subscribe them to
+          // the host-only broadcasts (the answer key) on this same socket.
+          if (room.match.hostUserId === socket.data.userId) {
+            socket.join(`${room.match.code}:host`);
+          }
         }
         ack({ ok: true });
         broadcastRoom(io, roomManager.getRoom(room.match.code)!.match);
@@ -98,20 +106,30 @@ export function registerSocketHandlers(io: Server<ClientToServerEvents, ServerTo
       }
     });
 
-    socket.on("room:setTeams", (payload) => guarded(socket, () => roomManager.setTeams(socket.data.code!, payload.assignments)));
-    socket.on("room:start", () => guarded(socket, () => roomManager.startMatch(socket.data.code!)));
-    socket.on("room:pause", () => guarded(socket, () => roomManager.pause(socket.data.code!)));
-    socket.on("room:resume", () => guarded(socket, () => roomManager.resume(socket.data.code!)));
+    socket.on("room:setTeams", (payload) => guardedHost(socket, () => roomManager.setTeams(socket.data.code!, payload.assignments)));
+    socket.on("room:start", () => guardedHost(socket, () => roomManager.startMatch(socket.data.code!)));
+    socket.on("room:pause", () => guardedHost(socket, () => roomManager.pause(socket.data.code!)));
+    socket.on("room:resume", () => guardedHost(socket, () => roomManager.resume(socket.data.code!)));
+    socket.on("room:leave", () =>
+      guarded(socket, () => {
+        roomManager.leavePlayer(socket.data.code!, socket.data.playerId!);
+        socket.leave(socket.data.code!);
+        socket.leave(`${socket.data.code}:player:${socket.data.playerId}`);
+        socket.data.code = null;
+        socket.data.playerId = null;
+        socket.data.role = null;
+      }),
+    );
 
-    socket.on("host:releaseQuestion", () => guarded(socket, () => roomManager.releaseQuestion(socket.data.code!)));
-    socket.on("host:armButtons", () => guarded(socket, () => roomManager.armButtons(socket.data.code!)));
-    socket.on("host:revealNextClub", () => guarded(socket, () => roomManager.revealNextClub(socket.data.code!)));
-    socket.on("host:judge", (payload) => guarded(socket, () => roomManager.hostJudge(socket.data.code!, payload.playerId, payload.correct)));
-    socket.on("host:endCareerRound", () => guarded(socket, () => roomManager.endCareerRound(socket.data.code!)));
-    socket.on("host:advance", () => guarded(socket, () => roomManager.advance(socket.data.code!)));
-    socket.on("host:adjustScore", (payload) => guarded(socket, () => roomManager.adjustScore(socket.data.code!, payload.teamOrPlayerId, payload.delta)));
-    socket.on("host:undo", () => guarded(socket, () => roomManager.undo(socket.data.code!)));
-    socket.on("host:endMatch", () => guarded(socket, () => roomManager.endMatchForce(socket.data.code!)));
+    socket.on("host:releaseQuestion", () => guardedHost(socket, () => roomManager.releaseQuestion(socket.data.code!)));
+    socket.on("host:armButtons", () => guardedHost(socket, () => roomManager.armButtons(socket.data.code!)));
+    socket.on("host:revealNextClub", () => guardedHost(socket, () => roomManager.revealNextClub(socket.data.code!)));
+    socket.on("host:judge", (payload) => guardedHost(socket, () => roomManager.hostJudge(socket.data.code!, payload.playerId, payload.correct)));
+    socket.on("host:endCareerRound", () => guardedHost(socket, () => roomManager.endCareerRound(socket.data.code!)));
+    socket.on("host:advance", () => guardedHost(socket, () => roomManager.advance(socket.data.code!)));
+    socket.on("host:adjustScore", (payload) => guardedHost(socket, () => roomManager.adjustScore(socket.data.code!, payload.teamOrPlayerId, payload.delta)));
+    socket.on("host:undo", () => guardedHost(socket, () => roomManager.undo(socket.data.code!)));
+    socket.on("host:endMatch", () => guardedHost(socket, () => roomManager.endMatchForce(socket.data.code!)));
 
     socket.on("player:buzz", () => guarded(socket, () => roomManager.playerBuzz(socket.data.code!, socket.data.playerId!)));
     socket.on("player:submitAnswer", (payload) =>
@@ -135,7 +153,14 @@ export function registerSocketHandlers(io: Server<ClientToServerEvents, ServerTo
       matchmakingManager.removeSocket(socket.id);
       if (socket.data.code && socket.data.playerId) {
         try {
-          roomManager.setConnected(socket.data.code, socket.data.playerId, false);
+          const room = roomManager.getRoom(socket.data.code);
+          if (room && room.match.phase === "lobby") {
+            // Still in the lobby: free the slot so someone else can take it,
+            // instead of leaving a permanently-reserved, never-connecting seat.
+            roomManager.leavePlayer(socket.data.code, socket.data.playerId);
+          } else {
+            roomManager.setConnected(socket.data.code, socket.data.playerId, false);
+          }
         } catch {
           /* room may already be gone */
         }
@@ -151,6 +176,19 @@ function guarded(socket: AppSocket, fn: () => void): void {
   } catch (err) {
     socket.emit("error", { message: errorMessage(err) });
   }
+}
+
+/** Same as `guarded`, but only lets through the room's actual host
+ * (the match's hostUserId) -- regardless of whether they're connected via
+ * a dedicated presenter tab or their own player tab. */
+function guardedHost(socket: AppSocket, fn: () => void): void {
+  guarded(socket, () => {
+    const room = roomManager.getRoom(socket.data.code!);
+    if (!room || room.match.hostUserId !== socket.data.userId) {
+      throw new EngineError("Apenas o anfitriao pode fazer isso");
+    }
+    fn();
+  });
 }
 
 function errorMessage(err: unknown): string {

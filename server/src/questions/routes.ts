@@ -2,8 +2,14 @@ import { Router } from "express";
 import { z } from "zod";
 import { requireAuth } from "../auth/routes.js";
 import { deleteCareerQuestion, deleteQuestion, insertCareerQuestion, insertQuestion, listCareerQuestions, listQuestions, updateQuestion } from "../db/questions.js";
+import { aiReviewRouter } from "./ai/review-routes.js";
 
 export const questionsRouter = Router();
+
+// AI-generated question review queue (pendentes/aprovar/rejeitar/estoque/gerar).
+// See server/src/questions/ai/ -- entirely separate from the hand-written
+// CRUD below, never touches a question the game can already serve.
+questionsRouter.use("/ia", aiReviewRouter);
 
 questionsRouter.get("/", requireAuth, (req, res) => {
   res.json({ questions: listQuestions({ category: req.query.category as any, difficulty: req.query.difficulty as any }) });

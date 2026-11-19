@@ -124,6 +124,23 @@
   border-radius: var(--radius-lg);
 }
 
+/* .auth-card sits on the light cream panel background (.panel), but
+   .field label / .brand-subtitle / .link-muted use --giz-dim, a *light*
+   cream-gray meant for muted text on the dark page background -- on this
+   light card it was nearly the same color as the card itself. Scoped to
+   .auth-card only, so every other (dark-background) use of those classes
+   elsewhere in the app is unaffected. */
+.auth-card .field label,
+.auth-card .brand-subtitle,
+.auth-card .link-muted {
+  color: #4a4a42;
+}
+
+.auth-card .field input::placeholder {
+  color: #8a8a7c;
+  opacity: 1;
+}
+
 .brand-title {
   font-size: clamp(2.2rem, 6vw, 3rem);
   color: var(--lima);

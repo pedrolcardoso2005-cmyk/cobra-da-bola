@@ -115,6 +115,7 @@ class MatchmakingManager {
       categories: ["aleatorio"],
       difficulties: [],
       kind: "ranked",
+      targetCount,
     });
 
     for (const entry of group) {

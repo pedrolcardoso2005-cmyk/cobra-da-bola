@@ -1,15 +1,17 @@
 import { useEffect, useRef, useState } from "react";
-import { useParams } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import { useRoom } from "../state/useRoom";
 import { useAuth } from "../state/AuthContext";
 import { PlayerButton } from "../components/PlayerButton";
+import { BracketControls, CareerControls, Phase1Controls } from "../components/HostControls";
 import { sfx } from "../sound/sfx";
 import "./PlayerView.css";
 
 export default function PlayerView() {
   const { code } = useParams();
   const { user } = useAuth();
-  const { match, playerView, error, actions } = useRoom(code, "player");
+  const navigate = useNavigate();
+  const { match, playerView, question, careerClubs, answerKey, error, actions } = useRoom(code, "player");
   const [answer, setAnswer] = useState("");
   const prevButtonState = useRef<string | null>(null);
   const prevLastAnswerId = useRef<string | null>(null);
@@ -44,15 +46,28 @@ export default function PlayerView() {
   const team = self.teamId;
 
   if (match.phase === "lobby") {
+    const target = match.settings.targetCount;
     return (
       <div className="center-page">
         <h1 className="font-display brand-title">Sala {match.code}</h1>
-        <p>Ola, {self.displayName}! Aguardando o anfitriao iniciar a partida...</p>
+        <p>Ola, {self.displayName}! A partida comeca automaticamente assim que a sala encher.</p>
+        <p className="font-display" style={{ color: "var(--lima)", fontSize: "1.6rem" }}>
+          {match.players.length}/{target} jogadores
+        </p>
         <ul className="player-lobby-list">
           {match.players.map((p) => (
             <li key={p.id} className={p.connected ? "" : "is-offline"}>{p.displayName}{p.teamId ? ` - Equipe ${p.teamId}` : ""}</li>
           ))}
         </ul>
+        <button
+          className="btn btn-ghost"
+          onClick={() => {
+            actions.leaveRoom();
+            navigate("/");
+          }}
+        >
+          Sair da sala
+        </button>
       </div>
     );
   }
@@ -136,6 +151,17 @@ export default function PlayerView() {
           <p className="player-view__note">Aguardando resultado...</p>
         )}
       </main>
+
+      {self.userId === match.hostUserId && (
+        <section className="player-view__host-panel panel-dark sticker">
+          <h2 className="font-display" style={{ color: "var(--lima)" }}>Voce criou esta sala -- controles do apresentador</h2>
+          {match.phase === "phase1" && <Phase1Controls match={match} actions={actions} answerKey={answerKey} question={question} />}
+          {match.phase === "career" && <CareerControls match={match} actions={actions} answerKey={answerKey} careerClubs={careerClubs} />}
+          {(match.phase === "semifinal" || match.phase === "final") && (
+            <BracketControls match={match} actions={actions} answerKey={answerKey} question={question} />
+          )}
+        </section>
+      )}
     </div>
   );
 }

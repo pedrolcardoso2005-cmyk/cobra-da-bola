@@ -8,7 +8,7 @@ let socket: AppSocket | null = null;
 
 export function getSocket(): AppSocket {
   if (socket) return socket;
-  const token = localStorage.getItem("cobra_token");
+  const token = sessionStorage.getItem("cobra_token");
   // An empty API_BASE_URL means "same origin" (production); socket.io-client
   // needs that passed as undefined, not "", to connect to the current host.
   socket = io(API_BASE_URL || undefined, {

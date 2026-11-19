@@ -31,6 +31,7 @@ export default function Home() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const [answerSeconds, setAnswerSeconds] = useState<AnswerSeconds>(20);
+  const [targetCount, setTargetCount] = useState(4);
   const [categories, setCategories] = useState<QuestionCategory[]>(["aleatorio"]);
   const [difficulties, setDifficulties] = useState<Difficulty[]>([]);
   const [joinCode, setJoinCode] = useState("");
@@ -48,7 +49,7 @@ export default function Home() {
     }
     function onFound(p: { code: string; isHost: boolean }) {
       setMmState(null);
-      navigate(`/sala/${p.code}`);
+      navigate(`/sala/${p.code}/jogador`);
     }
     socket.on("matchmaking:queued", onQueued);
     socket.on("matchmaking:found", onFound);
@@ -82,16 +83,16 @@ export default function Home() {
     setCreating(true);
     setError(null);
     const socket = getSocket();
-    socket.emit("room:create", { answerSeconds, categories, difficulties }, (res) => {
+    socket.emit("room:create", { answerSeconds, categories, difficulties, targetCount }, (res) => {
       setCreating(false);
-      if (res.ok) navigate(`/sala/${res.code}`);
+      if (res.ok) navigate(`/sala/${res.code}/jogador`);
       else setError(res.error);
     });
   }
 
   function joinRoom() {
     if (!joinCode.trim()) return;
-    navigate(`/sala/${joinCode.trim().toUpperCase()}`);
+    navigate(`/sala/${joinCode.trim().toUpperCase()}/jogador`);
   }
 
   return (
@@ -109,6 +110,14 @@ export default function Home() {
       <main className="home-grid">
         <section className="panel sticker home-card">
           <h2 className="font-display">Criar sala privada</h2>
+          <div className="field">
+            <label>Quantidade exata de participantes</label>
+            <select value={targetCount} onChange={(e) => setTargetCount(Number(e.target.value))}>
+              {PARTICIPANT_COUNTS.map((n) => (
+                <option key={n} value={n}>{n} jogadores</option>
+              ))}
+            </select>
+          </div>
           <div className="field">
             <label>Tempo de resposta</label>
             <select value={answerSeconds} onChange={(e) => setAnswerSeconds(Number(e.target.value) as AnswerSeconds)}>
@@ -146,6 +155,9 @@ export default function Home() {
           <button className="btn btn-primary btn-block" onClick={createRoom} disabled={creating}>
             {creating ? "Criando sala..." : "Criar sala"}
           </button>
+          <p style={{ color: "var(--giz-dim)", fontSize: "0.8rem" }}>
+            A partida comeca automaticamente assim que {targetCount} jogadores entrarem -- sem precisar de anfitriao.
+          </p>
         </section>
 
         <section className="panel sticker home-card">

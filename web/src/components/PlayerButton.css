@@ -17,6 +17,15 @@
   transition: transform 100ms ease, background 150ms ease, color 150ms ease;
 }
 
+/* .sticker (same specificity as .player-button) sets its own border-radius
+   and would otherwise win the cascade by source order, turning this into
+   a rounded square instead of a circle -- this rule's higher specificity
+   (two classes) settles just that property, without touching the
+   background/color rules below so the armed/buzzed/etc. states still win. */
+.player-button.sticker {
+  border-radius: 50%;
+}
+
 .player-button__team {
   position: absolute;
   top: 14px;

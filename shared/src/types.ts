@@ -45,6 +45,12 @@ export interface Question {
   /** Alternate accepted spellings/forms, lower-cased, accent-stripped. */
   acceptedAnswers?: string[];
   createdByUserId?: string;
+  /** Short note on the fact, shown only to the presenter alongside the answer key. */
+  explanation?: string;
+  /** URL of the official/reliable source the fact was checked against. */
+  sourceUrl?: string;
+  /** Season/date the fact refers to, for statistics that change over time. */
+  seasonRef?: string;
 }
 
 export interface CareerQuestion {
@@ -157,6 +163,10 @@ export interface MatchSettings {
   categories: QuestionCategory[];
   difficulties: Difficulty[];
   kind: MatchKind;
+  /** Exact number of players the room needs; the match starts
+   * automatically (server-authoritative, no host action required) the
+   * moment this many players have joined the lobby. */
+  targetCount: number;
 }
 
 export interface MatchState {

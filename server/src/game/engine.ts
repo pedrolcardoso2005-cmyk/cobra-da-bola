@@ -89,6 +89,16 @@ export function applyAction(input: MatchState, action: EngineAction): MatchState
       return state;
     }
 
+    case "LEAVE_PLAYER": {
+      if (state.phase !== "lobby") throw new EngineError("Nao e possivel sair depois que a partida comecou");
+      const player = state.players.find((p) => p.id === action.playerId);
+      if (!player) return state;
+      state.players = state.players.filter((p) => p.id !== action.playerId);
+      state.participantCount = state.players.length;
+      pushHistory(state, "leave", `${player.displayName} saiu da sala`);
+      return state;
+    }
+
     case "SET_CONNECTED": {
       const p = state.players.find((pl) => pl.id === action.playerId);
       if (p) p.connected = action.connected;

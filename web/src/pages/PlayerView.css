@@ -96,3 +96,8 @@
 .player-lobby-list .is-offline {
   opacity: 0.5;
 }
+
+.player-view__host-panel {
+  margin: 0 1.5rem 1.5rem;
+  padding: 1.25rem;
+}

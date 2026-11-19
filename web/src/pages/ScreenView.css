@@ -95,6 +95,11 @@
   gap: 1rem;
 }
 
+.lobby-board__target {
+  color: var(--bote);
+  font-size: 1.4rem;
+}
+
 .lobby-board__players {
   display: flex;
   flex-wrap: wrap;

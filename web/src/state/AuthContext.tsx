@@ -32,7 +32,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   const refresh = useCallback(async () => {
-    const token = localStorage.getItem("cobra_token");
+    const token = sessionStorage.getItem("cobra_token");
     if (!token) {
       setUser(null);
       setLoading(false);
@@ -43,7 +43,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUser(data.user);
     } catch (err) {
       if (err instanceof ApiError && err.status === 401) {
-        localStorage.removeItem("cobra_token");
+        sessionStorage.removeItem("cobra_token");
       }
       setUser(null);
     } finally {
@@ -57,18 +57,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const login = useCallback(async (email: string, password: string) => {
     const data = await api.post<{ token: string; user: AuthUser }>("/api/auth/login", { email, password });
-    localStorage.setItem("cobra_token", data.token);
+    sessionStorage.setItem("cobra_token", data.token);
     setUser(data.user);
   }, []);
 
   const register = useCallback(async (email: string, password: string, displayName: string) => {
     const data = await api.post<{ token: string; user: AuthUser }>("/api/auth/registrar", { email, password, displayName });
-    localStorage.setItem("cobra_token", data.token);
+    sessionStorage.setItem("cobra_token", data.token);
     setUser(data.user);
   }, []);
 
   const logout = useCallback(() => {
-    localStorage.removeItem("cobra_token");
+    sessionStorage.removeItem("cobra_token");
     disconnectSocket();
     setUser(null);
   }, []);

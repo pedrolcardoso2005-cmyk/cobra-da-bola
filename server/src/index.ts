@@ -13,8 +13,44 @@ import { rankingRouter } from "./ranking/routes.js";
 import { roomsRouter } from "./game/routes.js";
 import { registerSocketHandlers } from "./realtime/socket.js";
 import { seedDatabase } from "./questions/seed.js";
+import { loadQuestionBank } from "./questions/bank/index.js";
+import { loadAiQuestionsConfig } from "./questions/ai/config.js";
+import { checkAndTopUp } from "./questions/ai/stock.js";
 
 seedDatabase();
+const bankResult = loadQuestionBank();
+if (bankResult.inserted > 0) {
+  // eslint-disable-next-line no-console
+  console.log(`Banco de perguntas: ${bankResult.inserted} novas, ${bankResult.skipped} ja existiam (total no banco ate agora: ${bankResult.total}).`);
+}
+
+// Background stock top-up for the AI-generated question pipeline (see
+// server/src/questions/ai/). Fire-and-forget on purpose: checkAndTopUp()
+// never rejects (see stock.ts) and must never delay the HTTP/WebSocket
+// server from coming up. A no-op unless AI_QUESTIONS_ENABLED=true is set,
+// so simply deploying this code changes nothing in production by itself.
+const aiQuestionsConfig = loadAiQuestionsConfig();
+if (aiQuestionsConfig.enabled) {
+  checkAndTopUp(aiQuestionsConfig)
+    .then((summary) => {
+      if (!summary.skipped && summary.batches.length > 0) {
+        // eslint-disable-next-line no-console
+        console.log(`Estoque de perguntas (IA): ${summary.batches.length} lote(s) processado(s) no boot.`);
+      }
+    })
+    .catch((err) => {
+      // eslint-disable-next-line no-console
+      console.error("[ai-questions] falha ao verificar estoque:", err instanceof Error ? err.message : err);
+    });
+  // Periodic re-check while the process is up (every 6h) so stock keeps
+  // getting topped up during long-running deploys, not just at boot.
+  setInterval(() => {
+    checkAndTopUp(aiQuestionsConfig).catch((err) => {
+      // eslint-disable-next-line no-console
+      console.error("[ai-questions] falha ao verificar estoque:", err instanceof Error ? err.message : err);
+    });
+  }, 6 * 60 * 60 * 1000);
+}
 
 const app = express();
 app.use(cors({ origin: process.env.WEB_ORIGIN ?? "http://localhost:5173", credentials: true }));

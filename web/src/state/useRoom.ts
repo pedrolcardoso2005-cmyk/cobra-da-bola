@@ -74,6 +74,7 @@ function useActions(socket: ReturnType<typeof getSocket>, code: string | undefin
   const start = useCallback(() => socket.emit("room:start"), [socket]);
   const pause = useCallback(() => socket.emit("room:pause"), [socket]);
   const resume = useCallback(() => socket.emit("room:resume"), [socket]);
+  const leaveRoom = useCallback(() => socket.emit("room:leave"), [socket]);
   const releaseQuestion = useCallback((questionId?: string) => socket.emit("host:releaseQuestion", { questionId }), [socket]);
   const armButtons = useCallback(() => socket.emit("host:armButtons"), [socket]);
   const revealNextClub = useCallback(() => socket.emit("host:revealNextClub"), [socket]);
@@ -92,6 +93,7 @@ function useActions(socket: ReturnType<typeof getSocket>, code: string | undefin
     start,
     pause,
     resume,
+    leaveRoom,
     releaseQuestion,
     armButtons,
     revealNextClub,

@@ -145,7 +145,10 @@ function activeBuzzFirstPlayer(match: any): string | null {
 function LobbyBoard({ match }: { match: any }) {
   return (
     <div className="lobby-board sticker">
-      <span className="font-display">Aguardando inicio... {match.players.length} jogador(es) na sala</span>
+      <span className="font-display">Aguardando a sala encher</span>
+      <span className="font-display lobby-board__target">
+        {match.players.length}/{match.settings.targetCount} jogadores
+      </span>
       <div className="lobby-board__players">
         {match.players.map((p: any) => (
           <span key={p.id} className="lobby-board__chip sticker-sm font-display">{p.displayName}</span>

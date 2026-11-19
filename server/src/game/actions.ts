@@ -2,6 +2,7 @@ import type { AnswerSeconds, CareerQuestion, PlayerRef, Question, TeamKey } from
 
 export type EngineAction =
   | { type: "JOIN_PLAYER"; player: PlayerRef }
+  | { type: "LEAVE_PLAYER"; playerId: string }
   | { type: "SET_CONNECTED"; playerId: string; connected: boolean }
   | { type: "SET_TEAMS"; assignments: Record<string, TeamKey> }
   | { type: "START_MATCH"; now: number }
