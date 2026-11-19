@@ -1,0 +1,35 @@
+.room-entry__options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.5rem;
+  justify-content: center;
+  margin: 1rem 0 2rem;
+}
+
+.room-entry__option {
+  background: var(--giz);
+  color: var(--escama);
+  padding: 2rem;
+  width: 220px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  text-decoration: none;
+  text-align: center;
+  transition: transform 120ms ease;
+}
+
+.room-entry__option:hover {
+  transform: translateY(-4px);
+}
+
+.room-entry__option span:first-child {
+  font-size: 1.6rem;
+  color: var(--escama);
+}
+
+.room-entry__option span:last-child {
+  font-size: 0.85rem;
+  color: var(--escama-80);
+}

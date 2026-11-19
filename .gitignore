@@ -1,0 +1,18 @@
+node_modules/
+dist/
+build/
+*.local
+.env
+.env.*
+!.env.example
+server/data/
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+.DS_Store
+
+# Imagens de referencia do pacote original (inclui foto com marcas de
+# terceiros - Chelsea/Nike/Samsung - usada so para estudo de estilo, nunca
+# para ir ao repositorio publico).
+references/

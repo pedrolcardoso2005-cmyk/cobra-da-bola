@@ -1,0 +1,60 @@
+import "dotenv/config";
+import express from "express";
+import cors from "cors";
+import { createServer } from "node:http";
+import { existsSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
+import { Server } from "socket.io";
+import { SOCKET_PATH } from "@cobra/shared";
+import { authRouter } from "./auth/routes.js";
+import { questionsRouter } from "./questions/routes.js";
+import { rankingRouter } from "./ranking/routes.js";
+import { roomsRouter } from "./game/routes.js";
+import { registerSocketHandlers } from "./realtime/socket.js";
+import { seedDatabase } from "./questions/seed.js";
+
+seedDatabase();
+
+const app = express();
+app.use(cors({ origin: process.env.WEB_ORIGIN ?? "http://localhost:5173", credentials: true }));
+app.use(express.json());
+
+app.get("/api/health", (_req, res) => res.json({ ok: true }));
+app.use("/api/auth", authRouter);
+app.use("/api/perguntas", questionsRouter);
+app.use("/api/ranking", rankingRouter);
+app.use("/api/salas", roomsRouter);
+
+// In production, the web app is built and served from the same process
+// (see server/ENV_SETUP.md / deploy notes) so there's a single Railway
+// service and no cross-origin requests to configure. Local dev is
+// unaffected: `web/dist` only exists after `npm run build --workspace web`,
+// which the dev workflow never runs.
+const webDist = join(dirname(fileURLToPath(import.meta.url)), "../../web/dist");
+if (existsSync(webDist)) {
+  app.use(express.static(webDist));
+  app.get("*", (req, res, next) => {
+    if (req.path.startsWith("/api")) return next();
+    res.sendFile(join(webDist, "index.html"));
+  });
+}
+
+app.use((err: any, _req: any, res: any, _next: any) => {
+  // eslint-disable-next-line no-console
+  console.error(err);
+  res.status(500).json({ error: "Erro interno do servidor" });
+});
+
+const httpServer = createServer(app);
+const io = new Server(httpServer, {
+  path: SOCKET_PATH,
+  cors: { origin: process.env.WEB_ORIGIN ?? "http://localhost:5173", credentials: true },
+});
+registerSocketHandlers(io as any);
+
+const port = Number(process.env.PORT ?? 8787);
+httpServer.listen(port, () => {
+  // eslint-disable-next-line no-console
+  console.log(`Cobra da Bola server rodando em http://localhost:${port}`);
+});

@@ -1,0 +1,100 @@
+.career-board {
+  display: grid;
+  grid-template-columns: 1fr 240px;
+  gap: 1rem;
+}
+
+.career-board__main {
+  background: var(--gramado);
+  color: var(--escama);
+  padding: 1.5rem;
+}
+
+.career-board__title {
+  font-size: 1.6rem;
+  display: block;
+  margin-bottom: 1rem;
+}
+
+.career-board__clubs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.career-club {
+  min-width: 110px;
+  padding: 0.75em 1em;
+  text-align: center;
+  font-size: 1rem;
+}
+
+.career-club.is-revealed {
+  background: var(--giz);
+  color: var(--escama);
+}
+
+.career-club.is-hidden {
+  background: var(--escama);
+  color: var(--gramado);
+}
+
+.career-club__q {
+  font-family: var(--font-score);
+  font-size: 1.4rem;
+}
+
+.career-board__side {
+  background: #161616;
+  color: var(--giz);
+  padding: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.career-board__side-title {
+  font-size: 1.1rem;
+  color: var(--lima);
+}
+
+.career-board__count {
+  font-size: 2rem;
+}
+
+.career-board__players {
+  list-style: none;
+  margin: 0.75rem 0 0;
+  padding: 0;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.career-board__players li {
+  padding: 0.4em 0.6em;
+  border-radius: 6px;
+  background: #222;
+  font-size: 0.9rem;
+}
+
+.career-board__players li.is-qualified {
+  background: #16331c;
+  color: var(--gramado);
+  font-weight: 700;
+}
+
+.career-board__players li.is-eliminated {
+  background: #2a1414;
+  color: var(--bote-dim);
+  text-decoration: line-through;
+  opacity: 0.7;
+}
+
+@media (max-width: 720px) {
+  .career-board {
+    grid-template-columns: 1fr;
+  }
+}

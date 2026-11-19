@@ -1,0 +1,129 @@
+:root {
+  --lima: #d4f000;
+  --gramado: #8ceb7a;
+  --escama: #0d0d0d;
+  --bote: #ff7a1a;
+  --giz: #f4f4ea;
+
+  --escama-80: rgba(13, 13, 13, 0.8);
+  --escama-60: rgba(13, 13, 13, 0.6);
+  --giz-dim: #d8d8cc;
+  --lima-dim: #a8bf00;
+  --bote-dim: #c75f10;
+
+  --team-a: var(--lima);
+  --team-b: var(--bote);
+
+  --font-display: "Bangers", "Arial Black", sans-serif;
+  --font-score: "Anton", "Arial Narrow", sans-serif;
+  --font-body: "Inter", system-ui, sans-serif;
+
+  --outline: 3px;
+  --outline-lg: 4px;
+  --radius-sm: 10px;
+  --radius-md: 16px;
+  --radius-lg: 22px;
+
+  --shadow-offset: 6px;
+  --shadow-offset-sm: 4px;
+
+  color-scheme: dark;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--escama);
+  color: var(--giz);
+  font-family: var(--font-body);
+  -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
+}
+
+h1,
+h2,
+h3,
+.font-display {
+  font-family: var(--font-display);
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  line-height: 1;
+}
+
+.font-score {
+  font-family: var(--font-score);
+  letter-spacing: 0.01em;
+}
+
+a {
+  color: inherit;
+}
+
+button {
+  font-family: var(--font-body);
+}
+
+/* Sticker panel: thick black outline + solid offset shadow, no blur. This
+   is the one visual move repeated everywhere (reference 02/03/06) instead
+   of soft drop-shadows -- it's what keeps the whole app from reading as a
+   generic SaaS UI. */
+.sticker {
+  position: relative;
+  border: var(--outline) solid var(--escama);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-offset) var(--shadow-offset) 0 0 var(--escama);
+}
+
+.sticker-sm {
+  border-width: var(--outline);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-offset-sm) var(--shadow-offset-sm) 0 0 var(--escama);
+}
+
+.tilt-left {
+  transform: rotate(-1.5deg);
+}
+.tilt-right {
+  transform: rotate(1.5deg);
+}
+
+.hazard-stripes {
+  background-image: repeating-linear-gradient(
+    -45deg,
+    var(--bote) 0px,
+    var(--bote) 18px,
+    var(--escama) 18px,
+    var(--escama) 36px
+  );
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}

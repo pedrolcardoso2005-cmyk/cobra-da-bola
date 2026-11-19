@@ -1,0 +1,24 @@
+.ranking-table {
+  width: 100%;
+  max-width: 760px;
+  border-collapse: collapse;
+}
+
+.ranking-table th,
+.ranking-table td {
+  padding: 0.6em 0.8em;
+  text-align: left;
+  border-bottom: 1px solid #262626;
+}
+
+.ranking-table th {
+  color: var(--giz-dim);
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.ranking-table tr:first-child td {
+  color: var(--lima);
+  font-weight: 700;
+}

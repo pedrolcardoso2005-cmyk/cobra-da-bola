@@ -1,0 +1,325 @@
+.presenter {
+  position: relative;
+  width: clamp(140px, 16vw, 220px);
+  filter: drop-shadow(0 0 14px rgba(212, 240, 0, 0.35));
+  animation: presenter-enter 420ms cubic-bezier(0.2, 0.9, 0.3, 1.2);
+}
+
+@keyframes presenter-enter {
+  from {
+    transform: translateY(24px) scale(0.92);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+  }
+}
+
+.presenter__svg {
+  width: 100%;
+  height: auto;
+  display: block;
+  overflow: visible;
+}
+
+.presenter__glow ellipse {
+  fill: var(--lima);
+  opacity: 0.35;
+}
+
+.presenter__jersey {
+  fill: #141c3a;
+  stroke: var(--escama);
+  stroke-width: 4;
+}
+.presenter__jersey-trim {
+  fill: var(--lima);
+  stroke: var(--escama);
+  stroke-width: 4;
+}
+.presenter__crest {
+  fill: var(--bote);
+  stroke: var(--escama);
+  stroke-width: 2.5;
+}
+.presenter__arm,
+.presenter__leg {
+  fill: #141c3a;
+  stroke: var(--escama);
+  stroke-width: 4;
+}
+.presenter__shoe {
+  fill: var(--giz);
+  stroke: var(--escama);
+  stroke-width: 4;
+}
+
+.presenter__card {
+  fill: var(--escama);
+  stroke: var(--lima);
+  stroke-width: 3;
+}
+.presenter__card-text {
+  font-family: var(--font-display);
+  font-size: 9px;
+  fill: var(--giz);
+  letter-spacing: 0.02em;
+}
+.presenter__card-text--accent {
+  fill: var(--lima);
+  font-size: 11px;
+}
+
+.presenter__head {
+  fill: #c98554;
+  stroke: var(--escama);
+  stroke-width: 4;
+}
+.presenter__hair,
+.presenter__beard {
+  fill: #2a1d14;
+  stroke: var(--escama);
+  stroke-width: 2.5;
+}
+
+.presenter__eyebrow-left,
+.presenter__eyebrow-right {
+  fill: #2a1d14;
+  transform-origin: 93px 81px;
+  transition: transform 160ms ease;
+}
+.presenter__eyebrow-right {
+  transform-origin: 127px 81px;
+}
+
+.presenter__eye-white {
+  fill: var(--giz);
+  stroke: var(--escama);
+  stroke-width: 2;
+}
+.presenter__pupil {
+  fill: var(--escama);
+  transition: transform 160ms ease;
+}
+
+.presenter__mouth {
+  fill: none;
+  stroke: var(--escama);
+  stroke-width: 4;
+  stroke-linecap: round;
+  d: path("M 95 112 Q 110 116 125 112");
+  transition: d 120ms ease;
+}
+.presenter__mouth-shout {
+  fill: #5a1414;
+  stroke: var(--escama);
+  stroke-width: 3;
+  opacity: 0;
+  transform-origin: 110px 114px;
+  transition: opacity 120ms ease;
+}
+
+.presenter__caption {
+  position: absolute;
+  top: -14px;
+  left: 50%;
+  transform: translate(-50%, -100%);
+  background: var(--giz);
+  color: var(--escama);
+  padding: 0.3em 0.9em;
+  font-size: 1.1rem;
+  white-space: nowrap;
+  animation: caption-pop 260ms cubic-bezier(0.2, 0.9, 0.3, 1.3);
+}
+
+@keyframes caption-pop {
+  from {
+    transform: translate(-50%, -100%) scale(0.6);
+    opacity: 0;
+  }
+  to {
+    transform: translate(-50%, -100%) scale(1);
+    opacity: 1;
+  }
+}
+
+.presenter__countdown {
+  position: absolute;
+  top: -70px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 4rem;
+  color: var(--bote);
+  -webkit-text-stroke: 3px var(--escama);
+  animation: countdown-pop 560ms ease-out;
+}
+
+@keyframes countdown-pop {
+  0% {
+    transform: translateX(-50%) scale(1.8);
+    opacity: 0;
+  }
+  30% {
+    transform: translateX(-50%) scale(1);
+    opacity: 1;
+  }
+  100% {
+    transform: translateX(-50%) scale(0.95);
+    opacity: 1;
+  }
+}
+
+/* --- talking: mouth bounces open/closed while a question is being read --- */
+.presenter--talking .presenter__mouth {
+  animation: talk-wiggle 420ms ease-in-out infinite;
+}
+@keyframes talk-wiggle {
+  0%,
+  100% {
+    d: path("M 95 112 Q 110 116 125 112");
+  }
+  50% {
+    d: path("M 95 110 Q 110 128 125 110");
+  }
+}
+.presenter--talking .presenter__body {
+  animation: body-sway 900ms ease-in-out infinite;
+}
+@keyframes body-sway {
+  0%,
+  100% {
+    transform: rotate(-1deg);
+  }
+  50% {
+    transform: rotate(1deg);
+  }
+}
+
+/* --- countdown: urgency, red tint, shouting mouth, wide eyes --- */
+.presenter--countdown .presenter__mouth {
+  opacity: 0;
+}
+.presenter--countdown .presenter__mouth-shout {
+  opacity: 1;
+  animation: shout-pulse 420ms ease-in-out infinite;
+}
+@keyframes shout-pulse {
+  0%,
+  100% {
+    transform: scaleY(1);
+  }
+  50% {
+    transform: scaleY(1.25);
+  }
+}
+.presenter--countdown .presenter__head {
+  fill: #c98554;
+  filter: drop-shadow(0 0 0 var(--bote));
+}
+.presenter--countdown .presenter__jersey-trim {
+  fill: var(--bote);
+}
+.presenter--countdown .presenter__eyebrow-left {
+  transform: rotate(18deg) translate(2px, -2px);
+}
+.presenter--countdown .presenter__eyebrow-right {
+  transform: rotate(-18deg) translate(-2px, -2px);
+}
+.presenter--countdown {
+  filter: drop-shadow(0 0 20px rgba(255, 122, 26, 0.65));
+  animation: urgent-shake 280ms ease-in-out infinite;
+}
+@keyframes urgent-shake {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  25% {
+    transform: translateX(-3px) rotate(-1deg);
+  }
+  75% {
+    transform: translateX(3px) rotate(1deg);
+  }
+}
+
+/* --- correct / qualified / champion / final / semifinal: smile --- */
+.presenter--correct .presenter__mouth,
+.presenter--qualified .presenter__mouth,
+.presenter--champion .presenter__mouth,
+.presenter--final .presenter__mouth,
+.presenter--semifinal .presenter__mouth {
+  d: path("M 92 110 Q 110 126 128 110");
+}
+.presenter--correct .presenter__eyebrow-left,
+.presenter--qualified .presenter__eyebrow-left,
+.presenter--champion .presenter__eyebrow-left {
+  transform: translateY(-3px);
+}
+.presenter--correct .presenter__eyebrow-right,
+.presenter--qualified .presenter__eyebrow-right,
+.presenter--champion .presenter__eyebrow-right {
+  transform: translateY(-3px);
+}
+.presenter--correct,
+.presenter--qualified,
+.presenter--champion {
+  animation: pop-happy 380ms cubic-bezier(0.3, 1.4, 0.4, 1);
+}
+@keyframes pop-happy {
+  0% {
+    transform: scale(0.9) rotate(-2deg);
+  }
+  50% {
+    transform: scale(1.08) rotate(2deg);
+  }
+  100% {
+    transform: scale(1) rotate(0);
+  }
+}
+.presenter--champion {
+  filter: drop-shadow(0 0 24px rgba(212, 240, 0, 0.75));
+  animation: champion-bounce 900ms ease-in-out infinite;
+}
+@keyframes champion-bounce {
+  0%,
+  100% {
+    transform: translateY(0) rotate(-2deg);
+  }
+  50% {
+    transform: translateY(-10px) rotate(2deg);
+  }
+}
+
+/* --- wrong / eliminated: frown --- */
+.presenter--wrong .presenter__mouth,
+.presenter--eliminated .presenter__mouth {
+  d: path("M 92 112 Q 110 100 128 112");
+}
+.presenter--wrong .presenter__eyebrow-left,
+.presenter--eliminated .presenter__eyebrow-left {
+  transform: rotate(10deg);
+}
+.presenter--wrong .presenter__eyebrow-right,
+.presenter--eliminated .presenter__eyebrow-right {
+  transform: rotate(-10deg);
+}
+.presenter--wrong {
+  animation: shake-no 360ms ease-in-out;
+}
+@keyframes shake-no {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  25% {
+    transform: translateX(-6px);
+  }
+  75% {
+    transform: translateX(6px);
+  }
+}
+.presenter--eliminated {
+  filter: grayscale(0.6) drop-shadow(0 0 10px rgba(255, 122, 26, 0.3));
+  opacity: 0.85;
+}
