@@ -3,6 +3,9 @@
   "private": true,
   "version": "0.1.0",
   "description": "Quem e o Cobra da Bola? - jogo de perguntas de futebol multiplayer em tempo real",
+  "engines": {
+    "node": "22.x"
+  },
   "workspaces": [
     "shared",
     "server",
