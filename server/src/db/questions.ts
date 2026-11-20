@@ -296,6 +296,14 @@ export function pickRandomQuestion(opts: {
   return pool[Math.floor(Math.random() * pool.length)];
 }
 
+/** Single approved question by id -- used by solo mode to judge an answer
+ * server-side (the client only ever sees the id + the public fields via
+ * pickRandomQuestion/toPublicQuestion, never the correct answer). */
+export function getApprovedQuestionById(id: string): Question | null {
+  const row = db.prepare("SELECT * FROM questions WHERE id = ? AND status = 'approved'").get(id) as unknown as QuestionRow | undefined;
+  return row ? rowToQuestion(row) : null;
+}
+
 export function updateQuestion(id: string, patch: Partial<Omit<Question, "id">>): void {
   const current = db.prepare("SELECT * FROM questions WHERE id = ?").get(id) as unknown as QuestionRow | undefined;
   if (!current) throw new Error("Pergunta nao encontrada");
@@ -398,6 +406,14 @@ export function pickRandomCareerQuestion(opts: {
   });
   if (pool.length === 0) return null;
   return pool[Math.floor(Math.random() * pool.length)];
+}
+
+/** Single approved career by id -- used by solo mode to judge an answer
+ * server-side (the client only ever sees the clubs via the "next career"
+ * endpoint, never playerName/acceptedAnswers, until it answers). */
+export function getApprovedCareerById(id: string): CareerQuestion | null {
+  const row = db.prepare("SELECT * FROM career_questions WHERE id = ? AND status = 'approved'").get(id) as unknown as CareerRow | undefined;
+  return row ? rowToCareer(row) : null;
 }
 
 export function deleteCareerQuestion(id: string): void {

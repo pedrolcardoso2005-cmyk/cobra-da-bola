@@ -2,44 +2,11 @@ import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../state/AuthContext";
 import { getSocket } from "../lib/socket";
+import { CAREER_THEME_LABELS, CATEGORY_LABELS, DIFFICULTIES } from "../lib/labels";
 import { ANSWER_SECONDS_OPTIONS, type AnswerSeconds, type CareerTheme, type Difficulty, type QuestionCategory } from "@cobra/shared";
 import "./Home.css";
 
 const PARTICIPANT_COUNTS = [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
-
-const CATEGORY_LABELS: Record<QuestionCategory, string> = {
-  futebol_brasileiro: "Futebol brasileiro",
-  futebol_europeu: "Futebol europeu",
-  futebol_sulamericano: "Futebol sul-americano",
-  libertadores: "Libertadores",
-  champions_league: "Champions League",
-  copa_do_mundo: "Copa do Mundo",
-  selecoes: "Selecoes",
-  clubes: "Clubes",
-  jogadores: "Jogadores",
-  historia_do_futebol: "Historia do futebol",
-  competicoes_nacionais: "Competicoes nacionais",
-  competicoes_internacionais: "Competicoes internacionais",
-  futebol_saudita: "Futebol saudita",
-  concacaf: "CONCACAF",
-  aleatorio: "Aleatorio",
-};
-
-const DIFFICULTIES: Difficulty[] = ["facil", "moderado", "medio", "dificil", "impossivel"];
-
-const CAREER_THEME_LABELS: Record<CareerTheme, string> = {
-  aleatorio: "Aleatorio",
-  brasileiros: "Brasileiros",
-  sul_americanos: "Sul-americanos",
-  europeus: "Europeus",
-  norte_americanos: "Norte-americanos",
-  asiaticos: "Asiaticos",
-  jogadores_de_copa: "Jogadores de Copa do Mundo",
-  campeoes: "Campeoes",
-  idolos: "Idolos / Icons",
-  icones_atuais: "Icones atuais",
-  historicos: "Jogadores historicos",
-};
 
 export default function Home() {
   const { user, logout } = useAuth();
@@ -97,9 +64,9 @@ export default function Home() {
         <section className="panel sticker home-card">
           <h2 className="font-display">Jogar sozinho</h2>
           <p>Responda perguntas e jogue o Desafio das Carreiras sem precisar de outro jogador.</p>
-          <button className="btn btn-primary btn-block" disabled title="Em breve">
-            Em breve
-          </button>
+          <Link className="btn btn-primary btn-block" to="/sozinho">
+            Jogar sozinho
+          </Link>
         </section>
 
         <section className="panel sticker home-card">

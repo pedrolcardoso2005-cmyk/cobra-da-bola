@@ -57,3 +57,11 @@ export function careerClubsRevealed(careerQuestion: CareerQuestion | null, revea
   if (!careerQuestion) return null;
   return careerQuestion.clubs.slice(0, revealedCount);
 }
+
+/** Career view safe to send before it's been answered: the whole point is
+ * guessing playerName from the clubs, so neither it nor acceptedAnswers
+ * are included (mirrors toPublicQuestion hiding correctAnswer). Used by
+ * solo mode, which has no presenter to keep that secret for it. */
+export function toPublicCareer(c: CareerQuestion): { id: string; clubs: string[] } {
+  return { id: c.id, clubs: c.clubs };
+}

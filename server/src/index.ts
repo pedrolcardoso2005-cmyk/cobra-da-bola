@@ -11,6 +11,7 @@ import { authRouter } from "./auth/routes.js";
 import { questionsRouter } from "./questions/routes.js";
 import { rankingRouter } from "./ranking/routes.js";
 import { roomsRouter } from "./game/routes.js";
+import { soloRouter } from "./solo/routes.js";
 import { registerSocketHandlers } from "./realtime/socket.js";
 import { seedDatabase } from "./questions/seed.js";
 import { loadQuestionBank } from "./questions/bank/index.js";
@@ -61,6 +62,7 @@ app.use("/api/auth", authRouter);
 app.use("/api/perguntas", questionsRouter);
 app.use("/api/ranking", rankingRouter);
 app.use("/api/salas", roomsRouter);
+app.use("/api/solo", soloRouter);
 
 // In production, the web app is built and served from the same process
 // (see server/ENV_SETUP.md / deploy notes) so there's a single Railway

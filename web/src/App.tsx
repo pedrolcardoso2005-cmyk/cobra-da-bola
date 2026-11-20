@@ -10,6 +10,7 @@ import HowToPlay from "./pages/HowToPlay";
 import Profile from "./pages/Profile";
 import Ranking from "./pages/Ranking";
 import RoomEntry from "./pages/RoomEntry";
+import SoloView from "./pages/SoloView";
 import PlayerView from "./pages/PlayerView";
 import ScreenView from "./pages/ScreenView";
 import HostView from "./pages/HostView";
@@ -50,6 +51,7 @@ export default function App() {
       <Route path="/como-jogar" element={<HowToPlayRoute />} />
 
       <Route path="/" element={<Entry />} />
+      <Route path="/sozinho" element={<RequireAuth><SoloView /></RequireAuth>} />
       <Route path="/perfil" element={<RequireAuth><Profile /></RequireAuth>} />
       <Route path="/ranking" element={<RequireAuth><Ranking /></RequireAuth>} />
 
