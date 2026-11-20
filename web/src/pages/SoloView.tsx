@@ -194,12 +194,12 @@ export default function SoloView() {
             </div>
           </div>
           {mode === "perguntas" ? (
-            <button className="btn btn-primary btn-block" onClick={startQuestions}>
-              {question ? "Reiniciar" : "Comecar"}
+            <button className="btn btn-primary btn-block" onClick={startQuestions} disabled={loading}>
+              {loading ? "Carregando..." : question ? "Reiniciar" : "Comecar"}
             </button>
           ) : (
-            <button className="btn btn-primary btn-block" onClick={startCareers}>
-              {career ? "Reiniciar" : "Comecar"}
+            <button className="btn btn-primary btn-block" onClick={startCareers} disabled={loading}>
+              {loading ? "Carregando..." : career ? "Reiniciar" : "Comecar"}
             </button>
           )}
         </section>

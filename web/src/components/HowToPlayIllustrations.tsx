@@ -105,8 +105,11 @@ export function SemifinalIllustration() {
 export function FinalIllustration() {
   return (
     <svg viewBox="0 0 400 240" className="howto-illustration" role="img" aria-label="Final entre dois jogadores disputando o titulo de campeao, com uma taca estilizada e o apresentador ao fundo">
-      <polygon points="200,18 214,44 242,44 219,60 228,88 200,71 172,88 181,60 158,44 186,44" className="howto-trophy" />
-      <Presenter x={200} y={100} scale={0.85} />
+      <polygon
+        points="200,16 206.5,31.1 222.8,32.6 210.5,43.4 214.1,59.4 200,51 185.9,59.4 189.5,43.4 177.2,32.6 193.5,31.1"
+        className="howto-trophy"
+      />
+      <Presenter x={200} y={102} scale={0.85} />
       <QuestionBubble x={200} y={150} />
       <Player x={90} y={200} color="lima" scale={1.3} />
       <Player x={310} y={200} color="bote" scale={1.3} />

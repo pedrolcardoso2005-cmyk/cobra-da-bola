@@ -68,7 +68,14 @@
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.06em;
-  color: var(--giz-dim);
+  /* Every current use of .field sits on a light panel (.panel or
+     .auth-card), never on the dark page background --giz-dim was tuned
+     for (same ~1.3:1 contrast problem as the auth-card fix below, just
+     unscoped: it affected every "Tema"/"Dificuldade" label on Home.tsx
+     and SoloView.tsx too, not only the login/register card). Fixed at
+     the base rule instead of another scoped override, since there is no
+     dark-background .field usage anywhere to preserve. */
+  color: #4a4a42;
 }
 
 .field input,
@@ -125,12 +132,13 @@
 }
 
 /* .auth-card sits on the light cream panel background (.panel), but
-   .field label / .brand-subtitle / .link-muted use --giz-dim, a *light*
-   cream-gray meant for muted text on the dark page background -- on this
-   light card it was nearly the same color as the card itself. Scoped to
-   .auth-card only, so every other (dark-background) use of those classes
-   elsewhere in the app is unaffected. */
-.auth-card .field label,
+   .brand-subtitle / .link-muted use --giz-dim, a *light* cream-gray
+   meant for muted text on the dark page background -- on this light
+   card it was nearly the same color as the card itself. Scoped to
+   .auth-card only: unlike .field label above, these two classes DO have
+   legitimate dark-background uses elsewhere (e.g. the "Voltar" link in
+   Profile.tsx/Ranking.tsx sits directly on the dark page, not a panel),
+   so the fix stays scoped here instead of changing their base color. */
 .auth-card .brand-subtitle,
 .auth-card .link-muted {
   color: #4a4a42;
