@@ -46,6 +46,11 @@ export default function SoloView() {
   const [score, setScore] = useState({ correct: 0, wrong: 0, skipped: 0 });
   const [champion, setChampion] = useState(false);
   const [loading, setLoading] = useState(false);
+  // Groups this run's answers for "Meu Historico" (melhor pontuacao,
+  // historico de partidas) -- purely a grouping key the server never
+  // validates, regenerated every time a fresh "partida" starts.
+  const [questionSessionId, setQuestionSessionId] = useState(() => crypto.randomUUID());
+  const [careerSessionId, setCareerSessionId] = useState(() => crypto.randomUUID());
 
   // Progressive word-by-word reveal for the Perguntas tab -- purely local
   // (no race to sync, it's a single player), but the same pacing and
@@ -107,7 +112,11 @@ export default function SoloView() {
     const value = choiceOverride ?? answer;
     if (!question || !value.trim()) return;
     setSoloFrozen(true);
-    const data = await api.post<AnswerResult>("/api/solo/pergunta/responder", { questionId: question.id, answer: value.trim() });
+    const data = await api.post<AnswerResult>("/api/solo/pergunta/responder", {
+      questionId: question.id,
+      answer: value.trim(),
+      sessionId: questionSessionId,
+    });
     setResult(data);
     setScore((prev) => {
       const next = data.correct ? { ...prev, correct: prev.correct + 1 } : { ...prev, wrong: prev.wrong + 1 };
@@ -122,7 +131,7 @@ export default function SoloView() {
     setSoloFrozen(true);
     const data = await api.post<{ correctAnswer: string; acceptedAnswers?: string[]; explanation: string | null }>(
       "/api/solo/pergunta/pular",
-      { questionId: question.id },
+      { questionId: question.id, sessionId: questionSessionId },
     );
     setResult({ correct: false, correctAnswer: data.correctAnswer, acceptedAnswers: data.acceptedAnswers, explanation: data.explanation, skipped: true });
     setScore((prev) => ({ ...prev, skipped: prev.skipped + 1 }));
@@ -133,6 +142,7 @@ export default function SoloView() {
     setScore({ correct: 0, wrong: 0, skipped: 0 });
     setChampion(false);
     setSeenQuestionIds([]);
+    setQuestionSessionId(crypto.randomUUID());
     void loadNextQuestion([]);
   }
 
@@ -162,7 +172,11 @@ export default function SoloView() {
 
   async function submitCareerAnswer() {
     if (!career || !careerAnswer.trim()) return;
-    const data = await api.post<CareerAnswerResult>("/api/solo/carreira/responder", { careerId: career.id, answer: careerAnswer.trim() });
+    const data = await api.post<CareerAnswerResult>("/api/solo/carreira/responder", {
+      careerId: career.id,
+      answer: careerAnswer.trim(),
+      sessionId: careerSessionId,
+    });
     setCareerResult(data);
     setCareerScore((prev) => ({ ...prev, correct: data.correct ? prev.correct + 1 : prev.correct }));
     setSeenCareerIds((prev) => [...prev, career.id]);
@@ -172,7 +186,7 @@ export default function SoloView() {
     if (!career) return;
     const data = await api.post<{ playerName: string; acceptedAnswers: string[] | null }>(
       "/api/solo/carreira/pular",
-      { careerId: career.id },
+      { careerId: career.id, sessionId: careerSessionId },
     );
     setCareerResult({ correct: false, playerName: data.playerName, acceptedAnswers: data.acceptedAnswers, skipped: true });
     setCareerScore((prev) => ({ ...prev, skipped: prev.skipped + 1 }));
@@ -182,6 +196,7 @@ export default function SoloView() {
   function startCareers() {
     setCareerScore({ correct: 0, skipped: 0 });
     setSeenCareerIds([]);
+    setCareerSessionId(crypto.randomUUID());
     void loadNextCareer([]);
   }
 
@@ -191,6 +206,7 @@ export default function SoloView() {
         <h1 className="font-display home-header__title">Jogar sozinho</h1>
         <nav className="row">
           <span className="home-header__user">Ola, {user?.displayName}</span>
+          <Link className="btn btn-ghost" to="/historico">Meu historico</Link>
           <Link className="btn btn-ghost" to="/">Voltar ao inicio</Link>
         </nav>
       </header>

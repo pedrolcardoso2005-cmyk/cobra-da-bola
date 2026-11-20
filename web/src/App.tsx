@@ -9,6 +9,7 @@ import Landing from "./pages/Landing";
 import HowToPlay from "./pages/HowToPlay";
 import Profile from "./pages/Profile";
 import Ranking from "./pages/Ranking";
+import SoloHistory from "./pages/SoloHistory";
 import RoomEntry from "./pages/RoomEntry";
 import SoloView from "./pages/SoloView";
 import PlayerView from "./pages/PlayerView";
@@ -54,6 +55,7 @@ export default function App() {
       <Route path="/sozinho" element={<RequireAuth><SoloView /></RequireAuth>} />
       <Route path="/perfil" element={<RequireAuth><Profile /></RequireAuth>} />
       <Route path="/ranking" element={<RequireAuth><Ranking /></RequireAuth>} />
+      <Route path="/historico" element={<RequireAuth><SoloHistory /></RequireAuth>} />
 
       <Route path="/sala/:code" element={<RequireAuth><RoomEntry /></RequireAuth>} />
       <Route path="/sala/:code/jogador" element={<RequireAuth><PlayerView /></RequireAuth>} />

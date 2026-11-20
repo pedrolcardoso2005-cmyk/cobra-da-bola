@@ -139,3 +139,23 @@ CREATE TABLE IF NOT EXISTS ai_generation_log (
   finished_at INTEGER NOT NULL
 );
 `);
+
+// Meu Historico (Modo Solo): one row per graded/skipped answer, server-side
+// only (every row is written from an authenticated request already judged
+// by the server, never trusted from the client). session_id is a client-
+// generated grouping key for a single "partida" (regenerated each time the
+// player presses Comecar/Reiniciar) -- used only to group rows for
+// per-match stats and "melhor pontuacao", never validated, so it can't be
+// used to forge a correct/wrong/skipped tally.
+db.exec(`
+CREATE TABLE IF NOT EXISTS solo_answer_log (
+  id TEXT PRIMARY KEY,
+  user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  kind TEXT NOT NULL,
+  session_id TEXT NOT NULL,
+  result TEXT NOT NULL,
+  at INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_solo_answer_log_user ON solo_answer_log(user_id, kind);
+CREATE INDEX IF NOT EXISTS idx_solo_answer_log_session ON solo_answer_log(user_id, kind, session_id);
+`);

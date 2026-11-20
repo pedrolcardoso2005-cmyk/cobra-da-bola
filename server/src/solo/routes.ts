@@ -15,6 +15,7 @@ import {
   pickRandomQuestion,
 } from "../db/questions.js";
 import { toPublicCareer, toPublicQuestion } from "../game/view.js";
+import { getSoloHistorySummary, recordSoloAnswer, type SoloKind, type SoloResult } from "../db/soloHistory.js";
 
 export const soloRouter = Router();
 
@@ -22,6 +23,22 @@ function csv(value: unknown): string[] {
   if (typeof value !== "string" || value.trim() === "") return [];
   return value.split(",").filter(Boolean);
 }
+
+/** Never lets a history-logging hiccup fail the answer/skip response the
+ * player is actually waiting on -- "Meu Historico" is a record of the
+ * match, not a gate on playing it. */
+function logSoloAnswer(userId: string, kind: SoloKind, sessionId: unknown, result: SoloResult): void {
+  try {
+    recordSoloAnswer({ userId, kind, sessionId: typeof sessionId === "string" && sessionId ? sessionId : "sem-sessao", result });
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.error("Falha ao registrar historico solo", err);
+  }
+}
+
+soloRouter.get("/historico", requireAuth, (req: any, res) => {
+  res.json(getSoloHistorySummary(req.user.id));
+});
 
 soloRouter.get("/pergunta", requireAuth, (req, res) => {
   const categories = csv(req.query.categories) as QuestionCategory[];
@@ -34,24 +51,27 @@ soloRouter.get("/pergunta", requireAuth, (req, res) => {
 const answerSchema = z.object({
   questionId: z.string().min(1),
   answer: z.string(),
+  sessionId: z.string().min(1).optional(),
 });
 
-soloRouter.post("/pergunta/responder", requireAuth, (req, res) => {
+soloRouter.post("/pergunta/responder", requireAuth, (req: any, res) => {
   const parsed = answerSchema.safeParse(req.body);
   if (!parsed.success) return res.status(400).json({ error: "Dados invalidos" });
   const q = getApprovedQuestionById(parsed.data.questionId);
   if (!q) return res.status(404).json({ error: "Pergunta nao encontrada" });
   const correct = answersMatch(parsed.data.answer, q.correctAnswer, q.acceptedAnswers);
+  logSoloAnswer(req.user.id, "pergunta", parsed.data.sessionId, correct ? "correct" : "wrong");
   res.json({ correct, correctAnswer: q.correctAnswer, acceptedAnswers: q.acceptedAnswers, explanation: q.explanation ?? null });
 });
 
-const skipQuestionSchema = z.object({ questionId: z.string().min(1) });
+const skipQuestionSchema = z.object({ questionId: z.string().min(1), sessionId: z.string().min(1).optional() });
 
-soloRouter.post("/pergunta/pular", requireAuth, (req, res) => {
+soloRouter.post("/pergunta/pular", requireAuth, (req: any, res) => {
   const parsed = skipQuestionSchema.safeParse(req.body);
   if (!parsed.success) return res.status(400).json({ error: "Dados invalidos" });
   const q = getApprovedQuestionById(parsed.data.questionId);
   if (!q) return res.status(404).json({ error: "Pergunta nao encontrada" });
+  logSoloAnswer(req.user.id, "pergunta", parsed.data.sessionId, "skipped");
   res.json({ correctAnswer: q.correctAnswer, acceptedAnswers: q.acceptedAnswers, explanation: q.explanation ?? null });
 });
 
@@ -66,23 +86,26 @@ soloRouter.get("/carreira", requireAuth, (req, res) => {
 const careerAnswerSchema = z.object({
   careerId: z.string().min(1),
   answer: z.string(),
+  sessionId: z.string().min(1).optional(),
 });
 
-soloRouter.post("/carreira/responder", requireAuth, (req, res) => {
+soloRouter.post("/carreira/responder", requireAuth, (req: any, res) => {
   const parsed = careerAnswerSchema.safeParse(req.body);
   if (!parsed.success) return res.status(400).json({ error: "Dados invalidos" });
   const c = getApprovedCareerById(parsed.data.careerId);
   if (!c) return res.status(404).json({ error: "Carreira nao encontrada" });
   const correct = answersMatch(parsed.data.answer, c.playerName, c.acceptedAnswers);
+  logSoloAnswer(req.user.id, "carreira", parsed.data.sessionId, correct ? "correct" : "wrong");
   res.json({ correct, playerName: c.playerName, acceptedAnswers: c.acceptedAnswers ?? null });
 });
 
-const skipCareerSchema = z.object({ careerId: z.string().min(1) });
+const skipCareerSchema = z.object({ careerId: z.string().min(1), sessionId: z.string().min(1).optional() });
 
-soloRouter.post("/carreira/pular", requireAuth, (req, res) => {
+soloRouter.post("/carreira/pular", requireAuth, (req: any, res) => {
   const parsed = skipCareerSchema.safeParse(req.body);
   if (!parsed.success) return res.status(400).json({ error: "Dados invalidos" });
   const c = getApprovedCareerById(parsed.data.careerId);
   if (!c) return res.status(404).json({ error: "Carreira nao encontrada" });
+  logSoloAnswer(req.user.id, "carreira", parsed.data.sessionId, "skipped");
   res.json({ playerName: c.playerName, acceptedAnswers: c.acceptedAnswers ?? null });
 });

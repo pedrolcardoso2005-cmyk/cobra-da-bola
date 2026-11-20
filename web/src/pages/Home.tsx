@@ -54,6 +54,7 @@ export default function Home() {
           <span className="home-header__user">Ola, {user?.displayName}</span>
           <Link className="btn btn-ghost" to="/perfil">Perfil</Link>
           <Link className="btn btn-ghost" to="/ranking">Ranking</Link>
+          <Link className="btn btn-ghost" to="/historico">Meu historico</Link>
           <button className="btn btn-ghost" onClick={logout}>Sair</button>
         </nav>
       </header>
