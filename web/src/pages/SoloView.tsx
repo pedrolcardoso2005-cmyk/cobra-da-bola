@@ -1,9 +1,9 @@
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { useAuth } from "../state/AuthContext";
 import { api } from "../lib/api";
 import { CAREER_THEME_LABELS, CATEGORY_LABELS, DIFFICULTIES } from "../lib/labels";
-import type { CareerTheme, Difficulty, PublicQuestion, QuestionCategory } from "@cobra/shared";
+import { REVEAL_WORD_MS, type CareerTheme, type Difficulty, type PublicQuestion, type QuestionCategory } from "@cobra/shared";
 import "../components/CareerBoard.css";
 import "./PlayerView.css";
 import "./SoloView.css";
@@ -42,6 +42,25 @@ export default function SoloView() {
   const [score, setScore] = useState({ correct: 0, wrong: 0 });
   const [champion, setChampion] = useState(false);
   const [loading, setLoading] = useState(false);
+
+  // Progressive word-by-word reveal for the Perguntas tab -- purely local
+  // (no race to sync, it's a single player), but the same pacing and
+  // freeze-on-answer behaviour as the multiplayer reveal (PlayerView.tsx).
+  const soloWords = useMemo(() => (question?.prompt ?? "").split(/\s+/).filter(Boolean), [question?.prompt]);
+  const [soloRevealedCount, setSoloRevealedCount] = useState(0);
+  const [soloFrozen, setSoloFrozen] = useState(false);
+
+  useEffect(() => {
+    setSoloRevealedCount(soloWords.length > 0 ? 1 : 0);
+    setSoloFrozen(false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [question?.id]);
+
+  useEffect(() => {
+    if (soloFrozen || soloRevealedCount >= soloWords.length) return;
+    const id = setTimeout(() => setSoloRevealedCount((n) => n + 1), REVEAL_WORD_MS);
+    return () => clearTimeout(id);
+  }, [soloFrozen, soloRevealedCount, soloWords.length]);
 
   const [career, setCareer] = useState<PublicCareer | null>(null);
   const [seenCareerIds, setSeenCareerIds] = useState<string[]>([]);
@@ -83,6 +102,7 @@ export default function SoloView() {
   async function submitAnswer(choiceOverride?: string) {
     const value = choiceOverride ?? answer;
     if (!question || !value.trim()) return;
+    setSoloFrozen(true);
     const data = await api.post<AnswerResult>("/api/solo/pergunta/responder", { questionId: question.id, answer: value.trim() });
     setResult(data);
     setScore((prev) => {
@@ -221,7 +241,10 @@ export default function SoloView() {
               <p>{questionEmpty ? "Nenhuma pergunta encontrada com esse tema/dificuldade. Tente outro filtro." : 'Escolha o tema e a dificuldade e aperte "Comecar".'}</p>
             ) : (
               <div className="stack">
-                <p className="player-answer__question">{question.prompt}</p>
+                <p className="player-answer__question">{soloWords.slice(0, soloRevealedCount).join(" ")}</p>
+                {soloFrozen && soloRevealedCount < soloWords.length && (
+                  <p className="error-text">A pergunta foi interrompida porque voce respondeu antes de ela terminar.</p>
+                )}
                 {question.choices ? (
                   <div className="player-answer__choices">
                     {question.choices.map((c) => (

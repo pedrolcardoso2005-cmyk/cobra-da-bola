@@ -1,6 +1,7 @@
 import {
   careerQuotaFor,
   planForParticipantCount,
+  REVEAL_WORD_MS,
   routeCareerResult,
   semifinalPairings,
   type BracketMatchup,
@@ -241,6 +242,18 @@ export function applyAction(input: MatchState, action: EngineAction): MatchState
       }
       buzz.firstPlayerId = action.playerId;
       buzz.buzzOrder.push(action.playerId);
+      // Authoritative freeze point: how many words of the prompt were
+      // visible at this exact instant, derived from the server's own
+      // questionOpenedAt timestamp -- never from anything the client
+      // reports. Every player renders exactly this count once it's set
+      // (see PlayerView.tsx), so the frozen fragment is identical for
+      // everyone no matter each client's own latency/clock.
+      if (buzz.questionOpenedAt != null) {
+        const wordsElapsed = Math.floor((action.now - buzz.questionOpenedAt) / REVEAL_WORD_MS) + 1;
+        buzz.frozenWordCount = Math.max(1, Math.min(wordsElapsed, action.totalWords));
+      } else {
+        buzz.frozenWordCount = action.totalWords;
+      }
       // A fresh buzz always starts a new attempt; clear any stale result
       // left over from a previous buzzer (relevant in career mode, where
       // a wrong answer re-arms the buzzer for the next player without an
@@ -371,7 +384,7 @@ function requirePhase(state: MatchState, phase: MatchState["phase"]): void {
 }
 
 function emptyBuzz() {
-  return { questionOpenedAt: null, armed: false, firstPlayerId: null, buzzOrder: [], lockedOut: [] };
+  return { questionOpenedAt: null, armed: false, firstPlayerId: null, buzzOrder: [], lockedOut: [], frozenWordCount: null };
 }
 
 export function activeBuzz(state: MatchState) {

@@ -1,3 +1,9 @@
+/** Moderate, comfortable reading pace for the word-by-word question
+ * reveal -- shared by server (freezing the authoritative word count the
+ * instant someone buzzes) and client (animating the live reveal from the
+ * same anchor) so neither side can drift out of sync with the other. */
+export const REVEAL_WORD_MS = 200;
+
 /** Normalizes free-text answers for comparison: lower-case, strip accents,
  * collapse whitespace, drop punctuation. Used for open-answer judging hints
  * only — the presenter always makes the final call. */

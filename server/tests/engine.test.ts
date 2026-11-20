@@ -51,7 +51,7 @@ describe("n=2: single 1v1 stage goes straight to final", () => {
     for (let i = 0; i < 10; i++) {
       state = applyAction(state, { type: "RELEASE_BRACKET_QUESTION", question: mkQuestion(`q${i}`), now: Date.now() });
       state = applyAction(state, { type: "ARM_BUTTONS", now: Date.now(), durationSeconds: 10 });
-      state = applyAction(state, { type: "PLAYER_BUZZ", playerId: "0", now: Date.now() });
+      state = applyAction(state, { type: "PLAYER_BUZZ", playerId: "0", now: Date.now(), totalWords: 10 });
       state = applyAction(state, { type: "HOST_JUDGE", playerId: "0", correct: true, now: Date.now() });
       if (i < 9) state = applyAction(state, { type: "ADVANCE_BRACKET_QUESTION" });
     }
@@ -69,12 +69,12 @@ describe("n=3: straight to career, top 2 go to final", () => {
     assert.deepEqual(eligibleBuzzers(state).sort(), ["0", "1", "2"]);
 
     state = applyAction(state, { type: "RELEASE_CAREER_QUESTION", careerQuestion: mkCareer("c1") });
-    state = applyAction(state, { type: "PLAYER_BUZZ", playerId: "0", now: Date.now() });
+    state = applyAction(state, { type: "PLAYER_BUZZ", playerId: "0", now: Date.now(), totalWords: 10 });
     state = applyAction(state, { type: "HOST_JUDGE", playerId: "0", correct: true, now: Date.now() });
     assert.equal(state.phase, "career"); // only 1 of 2 slots filled
 
     state = applyAction(state, { type: "RELEASE_CAREER_QUESTION", careerQuestion: mkCareer("c2") });
-    state = applyAction(state, { type: "PLAYER_BUZZ", playerId: "1", now: Date.now() });
+    state = applyAction(state, { type: "PLAYER_BUZZ", playerId: "1", now: Date.now(), totalWords: 10 });
     state = applyAction(state, { type: "HOST_JUDGE", playerId: "1", correct: true, now: Date.now() });
 
     assert.equal(state.phase, "final");
@@ -87,7 +87,7 @@ describe("n=3: straight to career, top 2 go to final", () => {
     let state = freshMatch(3);
     state = applyAction(state, { type: "START_MATCH", now: Date.now() });
     state = applyAction(state, { type: "RELEASE_CAREER_QUESTION", careerQuestion: mkCareer("c1") });
-    state = applyAction(state, { type: "PLAYER_BUZZ", playerId: "0", now: Date.now() });
+    state = applyAction(state, { type: "PLAYER_BUZZ", playerId: "0", now: Date.now(), totalWords: 10 });
     state = applyAction(state, { type: "HOST_JUDGE", playerId: "0", correct: false, now: Date.now() });
     assert.ok(eligibleBuzzers(state).includes("1"));
     assert.ok(!eligibleBuzzers(state).includes("0"));
@@ -112,7 +112,7 @@ describe("n=4: two teams of 2, winner skips career and goes straight to the fina
       state = applyAction(state, { type: "RELEASE_PHASE1_QUESTION", question: mkQuestion(`q${i}`), now: Date.now() });
       state = applyAction(state, { type: "ARM_BUTTONS", now: Date.now(), durationSeconds: 10 });
       const teamARep = eligibleBuzzers(state).find((id) => ["0", "1"].includes(id))!;
-      state = applyAction(state, { type: "PLAYER_BUZZ", playerId: teamARep, now: Date.now() });
+      state = applyAction(state, { type: "PLAYER_BUZZ", playerId: teamARep, now: Date.now(), totalWords: 10 });
       state = applyAction(state, { type: "HOST_JUDGE", playerId: teamARep, correct: true, now: Date.now() });
       if (i < 9) state = applyAction(state, { type: "ADVANCE_PHASE1_QUESTION" });
     }
@@ -138,7 +138,7 @@ describe("n=8: teams of 4, career seeds semifinals 1v4 and 2v3", () => {
       state = applyAction(state, { type: "RELEASE_PHASE1_QUESTION", question: mkQuestion(`p1-${i}`), now: Date.now() });
       state = applyAction(state, { type: "ARM_BUTTONS", now: Date.now(), durationSeconds: 10 });
       const teamARep = eligibleBuzzers(state).find((id) => ["0", "1", "2", "3"].includes(id))!;
-      state = applyAction(state, { type: "PLAYER_BUZZ", playerId: teamARep, now: Date.now() });
+      state = applyAction(state, { type: "PLAYER_BUZZ", playerId: teamARep, now: Date.now(), totalWords: 10 });
       state = applyAction(state, { type: "HOST_JUDGE", playerId: teamARep, correct: true, now: Date.now() });
       if (i < 9) state = applyAction(state, { type: "ADVANCE_PHASE1_QUESTION" });
     }
@@ -147,7 +147,7 @@ describe("n=8: teams of 4, career seeds semifinals 1v4 and 2v3", () => {
     const careerOrder = ["0", "1", "2", "3"];
     for (let i = 0; i < careerOrder.length; i++) {
       state = applyAction(state, { type: "RELEASE_CAREER_QUESTION", careerQuestion: mkCareer(`c${i}`) });
-      state = applyAction(state, { type: "PLAYER_BUZZ", playerId: careerOrder[i], now: Date.now() });
+      state = applyAction(state, { type: "PLAYER_BUZZ", playerId: careerOrder[i], now: Date.now(), totalWords: 10 });
       state = applyAction(state, { type: "HOST_JUDGE", playerId: careerOrder[i], correct: true, now: Date.now() });
     }
 
@@ -161,7 +161,7 @@ describe("n=8: teams of 4, career seeds semifinals 1v4 and 2v3", () => {
     for (let i = 0; i < 10; i++) {
       state = applyAction(state, { type: "RELEASE_BRACKET_QUESTION", question: mkQuestion(`sf1-${i}`), now: Date.now() });
       state = applyAction(state, { type: "ARM_BUTTONS", now: Date.now(), durationSeconds: 10 });
-      state = applyAction(state, { type: "PLAYER_BUZZ", playerId: "0", now: Date.now() });
+      state = applyAction(state, { type: "PLAYER_BUZZ", playerId: "0", now: Date.now(), totalWords: 10 });
       state = applyAction(state, { type: "HOST_JUDGE", playerId: "0", correct: true, now: Date.now() });
       if (i < 9) state = applyAction(state, { type: "ADVANCE_BRACKET_QUESTION" });
     }
@@ -171,7 +171,7 @@ describe("n=8: teams of 4, career seeds semifinals 1v4 and 2v3", () => {
     for (let i = 0; i < 10; i++) {
       state = applyAction(state, { type: "RELEASE_BRACKET_QUESTION", question: mkQuestion(`sf2-${i}`), now: Date.now() });
       state = applyAction(state, { type: "ARM_BUTTONS", now: Date.now(), durationSeconds: 10 });
-      state = applyAction(state, { type: "PLAYER_BUZZ", playerId: "1", now: Date.now() });
+      state = applyAction(state, { type: "PLAYER_BUZZ", playerId: "1", now: Date.now(), totalWords: 10 });
       state = applyAction(state, { type: "HOST_JUDGE", playerId: "1", correct: true, now: Date.now() });
       if (i < 9) state = applyAction(state, { type: "ADVANCE_BRACKET_QUESTION" });
     }
@@ -181,7 +181,7 @@ describe("n=8: teams of 4, career seeds semifinals 1v4 and 2v3", () => {
     for (let i = 0; i < 10; i++) {
       state = applyAction(state, { type: "RELEASE_BRACKET_QUESTION", question: mkQuestion(`f-${i}`), now: Date.now() });
       state = applyAction(state, { type: "ARM_BUTTONS", now: Date.now(), durationSeconds: 10 });
-      state = applyAction(state, { type: "PLAYER_BUZZ", playerId: "0", now: Date.now() });
+      state = applyAction(state, { type: "PLAYER_BUZZ", playerId: "0", now: Date.now(), totalWords: 10 });
       state = applyAction(state, { type: "HOST_JUDGE", playerId: "0", correct: true, now: Date.now() });
       if (i < 9) state = applyAction(state, { type: "ADVANCE_BRACKET_QUESTION" });
     }
@@ -197,7 +197,7 @@ describe("timeout awards the point to the opponent", () => {
     state = applyAction(state, { type: "START_MATCH", now: Date.now() });
     state = applyAction(state, { type: "RELEASE_PHASE1_QUESTION", question: mkQuestion(), now: Date.now() });
     state = applyAction(state, { type: "ARM_BUTTONS", now: Date.now(), durationSeconds: 10 });
-    state = applyAction(state, { type: "PLAYER_BUZZ", playerId: "0", now: Date.now() });
+    state = applyAction(state, { type: "PLAYER_BUZZ", playerId: "0", now: Date.now(), totalWords: 10 });
     state = applyAction(state, { type: "TIMEOUT", now: Date.now() });
     assert.equal(state.teams!.find((t) => t.id === "B")!.score, 1);
     assert.equal(state.teams!.find((t) => t.id === "A")!.score, 0);
@@ -224,7 +224,7 @@ function winPhase1For(state: any, teamId: "A" | "B") {
     state = applyAction(state, { type: "RELEASE_PHASE1_QUESTION", question: mkQuestion(`q${teamId}${i}`), now: Date.now() });
     state = applyAction(state, { type: "ARM_BUTTONS", now: Date.now(), durationSeconds: 10 });
     const rep = eligibleBuzzers(state).find((id) => teamIds.includes(id))!;
-    state = applyAction(state, { type: "PLAYER_BUZZ", playerId: rep, now: Date.now() });
+    state = applyAction(state, { type: "PLAYER_BUZZ", playerId: rep, now: Date.now(), totalWords: 10 });
     state = applyAction(state, { type: "HOST_JUDGE", playerId: rep, correct: true, now: Date.now() });
     if (i < 9 && state.phase === "phase1") state = applyAction(state, { type: "ADVANCE_PHASE1_QUESTION" });
   }
@@ -268,7 +268,7 @@ describe("n=9: teams of 5 vs 4", () => {
     const order = ["0", "1", "2", "3"]; // player "4" never answers -> gets eliminated
     for (const pid of order) {
       state = applyAction(state, { type: "RELEASE_CAREER_QUESTION", careerQuestion: mkCareer(`c-${pid}`) });
-      state = applyAction(state, { type: "PLAYER_BUZZ", playerId: pid, now: Date.now() });
+      state = applyAction(state, { type: "PLAYER_BUZZ", playerId: pid, now: Date.now(), totalWords: 10 });
       state = applyAction(state, { type: "HOST_JUDGE", playerId: pid, correct: true, now: Date.now() });
     }
     assert.equal(state.phase, "semifinal");
@@ -290,7 +290,7 @@ describe("n=9: teams of 5 vs 4", () => {
 
     for (const pid of ["5", "6", "7", "8"]) {
       state = applyAction(state, { type: "RELEASE_CAREER_QUESTION", careerQuestion: mkCareer(`c-${pid}`) });
-      state = applyAction(state, { type: "PLAYER_BUZZ", playerId: pid, now: Date.now() });
+      state = applyAction(state, { type: "PLAYER_BUZZ", playerId: pid, now: Date.now(), totalWords: 10 });
       state = applyAction(state, { type: "HOST_JUDGE", playerId: pid, correct: true, now: Date.now() });
     }
     assert.equal(state.phase, "semifinal");

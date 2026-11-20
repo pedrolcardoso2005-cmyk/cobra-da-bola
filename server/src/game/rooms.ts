@@ -201,7 +201,21 @@ class RoomManager extends EventEmitter {
 
   playerBuzz(code: string, playerId: string): void {
     const room = this.mustGet(code);
-    this.dispatch(room, { type: "PLAYER_BUZZ", playerId, now: Date.now() });
+    // The reducer is pure and only sees MatchState (no question text), so
+    // the word count used to freeze the reveal has to be computed here,
+    // from whichever question is actually cached for the active phase --
+    // career buzzes don't use word-by-word reveal at all (clubs reveal
+    // one at a time instead), so 0 there is inert, never read by the UI.
+    const currentQuestionId =
+      room.match.phase === "phase1"
+        ? room.match.phase1?.currentQuestionId
+        : room.match.phase === "semifinal" || room.match.phase === "final"
+          ? room.match.bracketRound?.currentQuestionId
+          : null;
+    const totalWords = currentQuestionId
+      ? (room.questionCache.get(currentQuestionId)?.prompt.split(/\s+/).filter(Boolean).length ?? 0)
+      : 0;
+    this.dispatch(room, { type: "PLAYER_BUZZ", playerId, now: Date.now(), totalWords });
     const buzz = currentBuzzOf(room.match);
     if (buzz?.firstPlayerId === playerId && room.match.timer && (room.match.phase === "phase1" || room.match.phase === "semifinal" || room.match.phase === "final")) {
       this.clearPendingTimeout(room);

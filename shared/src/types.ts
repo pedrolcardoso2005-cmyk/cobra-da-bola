@@ -135,6 +135,13 @@ export interface BuzzState {
   buzzOrder: string[];
   /** Player ids who buzzed too late / are locked out for this question. */
   lockedOut: string[];
+  /** How many words of the prompt were visible the instant the first
+   * player buzzed, computed server-side from `questionOpenedAt` and
+   * REVEAL_WORD_MS (see shared/src/text.ts) -- null until someone buzzes.
+   * Every client renders exactly this many words once it's set, instead
+   * of trusting its own local reveal clock, so the frozen fragment is
+   * identical for everyone regardless of network latency. */
+  frozenWordCount: number | null;
 }
 
 export interface AnswerResult {

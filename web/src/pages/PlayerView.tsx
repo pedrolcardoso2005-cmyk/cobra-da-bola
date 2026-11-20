@@ -5,11 +5,8 @@ import { useAuth } from "../state/AuthContext";
 import { PlayerButton } from "../components/PlayerButton";
 import { BracketControls, CareerControls, Phase1Controls } from "../components/HostControls";
 import { sfx } from "../sound/sfx";
+import { REVEAL_WORD_MS } from "@cobra/shared";
 import "./PlayerView.css";
-
-// Moderate, comfortable reading pace for the word-by-word reveal -- not an
-// instant dump of the text, not slow enough to make players wait.
-const REVEAL_WORD_MS = 200;
 
 export default function PlayerView() {
   const { code } = useParams();
@@ -20,45 +17,42 @@ export default function PlayerView() {
   const prevButtonState = useRef<string | null>(null);
   const prevLastAnswerId = useRef<string | null>(null);
 
-  // Progressive word-by-word reveal of the current question, on the
-  // player's own screen. Purely a client-side presentation detail: the
-  // server already sent the full prompt in playerView.currentQuestion, this
-  // just staggers how much of it is shown. Pressing the buzzer (any
-  // player's own local press, win the race or not) freezes it exactly
-  // where it was -- the rest of the words are never shown to that player.
-  const questionId = playerView?.currentQuestion?.id ?? null;
+  // Progressive word-by-word reveal of the current question -- server
+  // authoritative (Fase 1 do "programa de TV"): the server stamps
+  // buzz.questionOpenedAt the instant the buzzers arm, and the moment
+  // ANY player's buzz registers, it computes buzz.frozenWordCount from
+  // that same anchor and REVEAL_WORD_MS (shared/src/text.ts) -- never
+  // from this client's own clock. Every player's screen renders exactly
+  // that frozen count once it arrives; before that, each screen just
+  // animates the live count from the same server anchor, so they stay
+  // in step with each other regardless of individual network latency.
   const words = useMemo(
     () => (playerView?.currentQuestion?.prompt ?? "").split(/\s+/).filter(Boolean),
     [playerView?.currentQuestion?.prompt],
   );
-  const [revealedCount, setRevealedCount] = useState(0);
-  const [revealInterrupted, setRevealInterrupted] = useState(false);
-  const revealFrozenRef = useRef(false);
+  const buzz = match?.phase1?.buzz ?? match?.bracketRound?.buzz ?? null;
+  const frozenWordCount = buzz?.frozenWordCount ?? null;
+  const questionOpenedAt = buzz?.questionOpenedAt ?? null;
 
+  // Forces a re-render every tick while the reveal is still live, purely
+  // to recompute the derived count below from the server anchor -- holds
+  // no reveal state of its own (there's nothing local left to reset per
+  // question; the displayed count is always recomputed from server data).
+  const [, forceTick] = useState(0);
   useEffect(() => {
-    setRevealedCount(words.length > 0 ? 1 : 0);
-    setRevealInterrupted(false);
-    revealFrozenRef.current = false;
-    // Only a new question (by id) should restart the reveal -- re-renders
-    // of the same question (timer ticking, score changes, etc.) must not
-    // reset it, so `words` is deliberately left out of the dependency list.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [questionId]);
+    if (!questionOpenedAt || frozenWordCount != null) return;
+    const id = setInterval(() => forceTick((n) => n + 1), REVEAL_WORD_MS);
+    return () => clearInterval(id);
+  }, [questionOpenedAt, frozenWordCount]);
 
-  useEffect(() => {
-    if (revealFrozenRef.current || revealedCount >= words.length) return;
-    const id = setTimeout(() => {
-      if (revealFrozenRef.current) return;
-      setRevealedCount((n) => n + 1);
-    }, REVEAL_WORD_MS);
-    return () => clearTimeout(id);
-  }, [revealedCount, words.length]);
-
-  function freezeReveal() {
-    if (revealFrozenRef.current) return;
-    revealFrozenRef.current = true;
-    if (revealedCount < words.length) setRevealInterrupted(true);
-  }
+  const revealedCount = (() => {
+    if (!questionOpenedAt) return 0; // buzzers not armed yet -- nothing to show
+    if (frozenWordCount != null) return frozenWordCount;
+    const elapsed = Date.now() - questionOpenedAt;
+    return Math.max(1, Math.min(Math.floor(elapsed / REVEAL_WORD_MS) + 1, words.length));
+  })();
+  const revealInterrupted = frozenWordCount != null && frozenWordCount < words.length;
+  const interruptedBy = revealInterrupted ? match?.players.find((p) => p.id === buzz?.firstPlayerId)?.displayName : undefined;
 
   useEffect(() => {
     const st = playerView?.myButtonState;
@@ -141,10 +135,14 @@ export default function PlayerView() {
       </header>
 
       <main className="player-view__main">
-        {playerView.currentQuestion && (
+        {playerView.currentQuestion && questionOpenedAt && (
           <div className="player-answer">
             <p className="player-answer__question">{words.slice(0, revealedCount).join(" ")}</p>
-            {revealInterrupted && <p className="error-text">A pergunta foi interrompida porque voce respondeu antes de ela terminar.</p>}
+            {revealInterrupted && (
+              <p className="error-text">
+                A pergunta foi interrompida porque {interruptedBy === self.displayName ? "voce respondeu" : `${interruptedBy ?? "alguem"} respondeu`} antes de ela terminar.
+              </p>
+            )}
           </div>
         )}
 
@@ -153,10 +151,7 @@ export default function PlayerView() {
           buzzedOtherName={buzzedOtherName(match, playerView.myButtonState)}
           teamLabel={team ?? undefined}
           onPress={() => {
-            if (playerView.currentQuestion) {
-              freezeReveal();
-              actions.buzz(playerView.currentQuestion.id);
-            }
+            if (playerView.currentQuestion) actions.buzz(playerView.currentQuestion.id);
           }}
         />
 
