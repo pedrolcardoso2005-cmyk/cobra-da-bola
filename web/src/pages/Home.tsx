@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../state/AuthContext";
 import { getSocket } from "../lib/socket";
@@ -38,40 +38,6 @@ export default function Home() {
   const [error, setError] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
 
-  const [mmTarget, setMmTarget] = useState(2);
-  const [mmSeconds, setMmSeconds] = useState<AnswerSeconds>(20);
-  const [mmState, setMmState] = useState<{ waiting: number; targetCount: number } | null>(null);
-
-  useEffect(() => {
-    const socket = getSocket();
-    function onQueued(p: { targetCount: number; waiting: number }) {
-      setMmState(p);
-    }
-    function onFound(p: { code: string; isHost: boolean }) {
-      setMmState(null);
-      navigate(`/sala/${p.code}/jogador`);
-    }
-    socket.on("matchmaking:queued", onQueued);
-    socket.on("matchmaking:found", onFound);
-    return () => {
-      socket.off("matchmaking:queued", onQueued);
-      socket.off("matchmaking:found", onFound);
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  function enterMatchmaking() {
-    const socket = getSocket();
-    socket.emit("matchmaking:enter", { targetCount: mmTarget, answerSeconds: mmSeconds }, (res) => {
-      if (!res.ok) setError(res.error);
-    });
-  }
-
-  function cancelMatchmaking() {
-    getSocket().emit("matchmaking:cancel");
-    setMmState(null);
-  }
-
   function toggleCategory(cat: QuestionCategory) {
     setCategories((prev) => (prev.includes(cat) ? prev.filter((c) => c !== cat) : [...prev, cat]));
   }
@@ -107,9 +73,19 @@ export default function Home() {
         </nav>
       </header>
 
+      <p className="home-players-note sticker-sm font-display">Quantidade de jogadores: 1 a 12</p>
+
       <main className="home-grid">
         <section className="panel sticker home-card">
-          <h2 className="font-display">Criar sala privada</h2>
+          <h2 className="font-display">Jogar sozinho</h2>
+          <p>Responda perguntas e jogue o Desafio das Carreiras sem precisar de outro jogador.</p>
+          <button className="btn btn-primary btn-block" disabled title="Em breve">
+            Em breve
+          </button>
+        </section>
+
+        <section className="panel sticker home-card">
+          <h2 className="font-display">Criar partida</h2>
           <div className="field">
             <label>Quantidade exata de participantes</label>
             <select value={targetCount} onChange={(e) => setTargetCount(Number(e.target.value))}>
@@ -127,7 +103,7 @@ export default function Home() {
             </select>
           </div>
           <div className="field">
-            <label>Categorias (nenhuma selecionada = aleatorio)</label>
+            <label>Tema (nenhum selecionado = aleatorio)</label>
             <div className="chip-grid">
               {(Object.keys(CATEGORY_LABELS) as QuestionCategory[]).map((cat) => (
                 <button
@@ -158,10 +134,10 @@ export default function Home() {
           <p style={{ color: "var(--giz-dim)", fontSize: "0.8rem" }}>
             A partida comeca automaticamente assim que {targetCount} jogadores entrarem -- sem precisar de anfitriao.
           </p>
-        </section>
 
-        <section className="panel sticker home-card">
-          <h2 className="font-display">Entrar com codigo</h2>
+          <hr className="home-card__divider" />
+
+          <h3 className="font-display">Entrar com codigo</h3>
           <p>Peca o codigo da sala ao anfitriao e entre para jogar.</p>
           <div className="field">
             <label htmlFor="code">Codigo da sala</label>
@@ -171,36 +147,11 @@ export default function Home() {
         </section>
 
         <section className="panel sticker home-card">
-          <h2 className="font-display">Partida online</h2>
-          <p>Encontre outros jogadores automaticamente. Partidas por aqui valem para o ranking oficial.</p>
-          {mmState ? (
-            <div className="stack">
-              <p>
-                Procurando partida de {mmState.targetCount} participantes... {mmState.waiting}/{mmState.targetCount} na fila.
-              </p>
-              <button className="btn btn-ghost btn-block" onClick={cancelMatchmaking}>Cancelar busca</button>
-            </div>
-          ) : (
-            <>
-              <div className="field">
-                <label>Numero de participantes</label>
-                <select value={mmTarget} onChange={(e) => setMmTarget(Number(e.target.value))}>
-                  {PARTICIPANT_COUNTS.map((n) => (
-                    <option key={n} value={n}>{n} jogadores</option>
-                  ))}
-                </select>
-              </div>
-              <div className="field">
-                <label>Tempo de resposta</label>
-                <select value={mmSeconds} onChange={(e) => setMmSeconds(Number(e.target.value) as AnswerSeconds)}>
-                  {ANSWER_SECONDS_OPTIONS.map((s) => (
-                    <option key={s} value={s}>{s} segundos</option>
-                  ))}
-                </select>
-              </div>
-              <button className="btn btn-primary btn-block" onClick={enterMatchmaking}>Procurar partida</button>
-            </>
-          )}
+          <h2 className="font-display">Como jogar</h2>
+          <p>Veja as quatro etapas do jogo: perguntas, Desafio das Carreiras, semifinal e final.</p>
+          <Link className="btn btn-primary btn-block" to="/como-jogar">
+            Ver como jogar
+          </Link>
         </section>
       </main>
     </div>

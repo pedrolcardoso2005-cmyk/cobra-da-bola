@@ -5,6 +5,8 @@ import Register from "./pages/Register";
 import ForgotPassword from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
 import Home from "./pages/Home";
+import Landing from "./pages/Landing";
+import HowToPlay from "./pages/HowToPlay";
 import Profile from "./pages/Profile";
 import Ranking from "./pages/Ranking";
 import RoomEntry from "./pages/RoomEntry";
@@ -19,6 +21,25 @@ function RequireAuth({ children }: { children: React.ReactElement }) {
   return children;
 }
 
+// "/" used to be unconditionally behind RequireAuth (redirecting straight
+// to /login for anyone not signed in). It's public-facing now: a visitor
+// without an account should be able to see what the game is before being
+// asked to sign up (see HowToPlay/Landing) -- only once there IS a user
+// does "/" become the real post-login hub, unchanged from before.
+function Entry() {
+  const { user, loading } = useAuth();
+  if (loading) return <div className="center-page">Carregando...</div>;
+  return user ? <Home /> : <Landing />;
+}
+
+// Reachable both before login (from Landing, closing CTA leads to /login)
+// and after login (from the hub, where there's nothing left to log into).
+function HowToPlayRoute() {
+  const { user, loading } = useAuth();
+  if (loading) return <div className="center-page">Carregando...</div>;
+  return user ? <HowToPlay /> : <HowToPlay ctaTo="/login" />;
+}
+
 export default function App() {
   return (
     <Routes>
@@ -26,8 +47,9 @@ export default function App() {
       <Route path="/registrar" element={<Register />} />
       <Route path="/esqueci-senha" element={<ForgotPassword />} />
       <Route path="/redefinir-senha" element={<ResetPassword />} />
+      <Route path="/como-jogar" element={<HowToPlayRoute />} />
 
-      <Route path="/" element={<RequireAuth><Home /></RequireAuth>} />
+      <Route path="/" element={<Entry />} />
       <Route path="/perfil" element={<RequireAuth><Profile /></RequireAuth>} />
       <Route path="/ranking" element={<RequireAuth><Ranking /></RequireAuth>} />
 

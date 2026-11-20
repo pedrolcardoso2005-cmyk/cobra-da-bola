@@ -55,7 +55,7 @@ export default function HostView() {
 }
 
 function tabLabel(p: string): string {
-  const map: Record<string, string> = { lobby: "Lobby", phase1: "Fase 1", career: "Carreira", semifinal: "Semifinal", final: "Final", champion: "Campeao" };
+  const map: Record<string, string> = { lobby: "Lobby", phase1: "Fase 1", career: "Desafio das Carreiras", semifinal: "Semifinal", final: "Final", champion: "Campeao" };
   return map[p] ?? p;
 }
 

@@ -1,0 +1,56 @@
+.howto-page {
+  max-width: 980px;
+  margin: 0 auto;
+  padding: 2rem 1.25rem 3rem;
+}
+
+.howto-page__header {
+  text-align: center;
+  margin-bottom: 1.5rem;
+}
+
+.howto-steps {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.25rem;
+}
+
+.howto-step {
+  background: var(--giz);
+  color: var(--escama);
+  padding: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.howto-step__title {
+  font-size: 1.3rem;
+  margin: 0;
+}
+
+.howto-step__text {
+  margin: 0;
+  line-height: 1.4;
+}
+
+.howto-page__players-note {
+  display: block;
+  width: fit-content;
+  margin: 2rem auto 1.5rem;
+  background: var(--lima);
+  color: var(--escama);
+  padding: 0.5em 1em;
+  font-size: 1rem;
+}
+
+.howto-page__cta {
+  max-width: 420px;
+  margin: 0 auto;
+}
+
+@media (max-width: 720px) {
+  .howto-steps {
+    grid-template-columns: 1fr;
+  }
+}

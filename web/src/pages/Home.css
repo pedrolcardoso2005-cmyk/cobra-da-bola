@@ -35,6 +35,22 @@
   margin-top: 0;
 }
 
+.home-card__divider {
+  border: none;
+  border-top: 2px solid var(--escama-60);
+  margin: 1.5rem 0;
+}
+
+.home-players-note {
+  display: block;
+  width: fit-content;
+  margin: 0 auto 1.5rem;
+  background: var(--lima);
+  color: var(--escama);
+  padding: 0.4em 0.9em;
+  font-size: 0.85rem;
+}
+
 .chip-grid {
   display: flex;
   flex-wrap: wrap;

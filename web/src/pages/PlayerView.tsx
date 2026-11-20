@@ -222,7 +222,7 @@ export default function PlayerView() {
 function phaseLabel(phase: string): string {
   const map: Record<string, string> = {
     phase1: "Fase 1",
-    career: "Fase de carreira",
+    career: "Desafio das Carreiras",
     semifinal: "Semifinal",
     final: "Final",
   };

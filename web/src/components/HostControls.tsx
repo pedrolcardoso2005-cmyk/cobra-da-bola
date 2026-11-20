@@ -34,7 +34,7 @@ export function CareerControls({ match, actions, answerKey, careerClubs }: any) 
   const buzz = c.buzz;
   return (
     <div className="stack">
-      <h2 className="font-display">Fase de carreira</h2>
+      <h2 className="font-display">Desafio das Carreiras</h2>
       {!c.careerQuestionId && <button className="btn btn-primary" onClick={() => actions.releaseQuestion()}>Revelar nova carreira</button>}
       {c.careerQuestionId && (
         <>

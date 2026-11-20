@@ -1,0 +1,103 @@
+.howto-illustration {
+  width: 100%;
+  height: auto;
+  display: block;
+  overflow: visible;
+}
+
+.howto-player__body {
+  stroke: var(--escama);
+  stroke-width: 3;
+}
+.howto-player__head {
+  stroke: var(--escama);
+  stroke-width: 3;
+  fill: #c98554;
+}
+.howto-player--lima .howto-player__body {
+  fill: var(--lima);
+}
+.howto-player--bote .howto-player__body {
+  fill: var(--bote);
+}
+.howto-player--giz .howto-player__body {
+  fill: var(--giz-dim);
+}
+
+.howto-presenter__body,
+.howto-presenter__trim {
+  stroke: var(--escama);
+  stroke-width: 3;
+}
+.howto-presenter__body {
+  fill: #141c3a;
+}
+.howto-presenter__trim {
+  fill: var(--lima);
+}
+.howto-presenter__head {
+  fill: #c98554;
+  stroke: var(--escama);
+  stroke-width: 3;
+}
+.howto-presenter__card {
+  fill: var(--giz);
+  stroke: var(--escama);
+  stroke-width: 2.5;
+}
+
+.howto-bubble {
+  fill: var(--giz);
+  stroke: var(--escama);
+  stroke-width: 3;
+}
+.howto-bubble__text {
+  fill: var(--escama);
+  font-size: 20px;
+}
+
+.howto-buzzer {
+  fill: var(--lima);
+  stroke: var(--escama);
+  stroke-width: 3;
+}
+.howto-buzzer__text {
+  fill: var(--escama);
+  font-size: 18px;
+}
+
+.howto-club-card {
+  fill: var(--giz);
+  stroke: var(--escama);
+  stroke-width: 3;
+}
+.howto-club-card--mystery {
+  fill: var(--escama);
+}
+.howto-club-card--mystery + .howto-club-card__text,
+.howto-club-card--mystery ~ text {
+  fill: var(--lima);
+}
+.howto-club-card__text {
+  fill: var(--escama);
+  font-size: 13px;
+  letter-spacing: 0.01em;
+}
+.howto-arrow-line {
+  stroke: var(--giz-dim);
+  stroke-width: 2;
+  stroke-dasharray: 6 6;
+  fill: none;
+}
+
+.howto-vs {
+  fill: var(--escama);
+  font-size: 22px;
+}
+
+.howto-trophy {
+  fill: var(--lima);
+  stroke: var(--escama);
+  stroke-width: 3;
+}
+
