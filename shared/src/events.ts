@@ -1,5 +1,6 @@
 import type {
   AnswerSeconds,
+  CareerTheme,
   Difficulty,
   HostQuestionView,
   MatchState,
@@ -17,7 +18,13 @@ export interface ClientToServerEvents {
     ack: (res: { ok: true } | { ok: false; error: string }) => void,
   ) => void;
   "room:create": (
-    payload: { answerSeconds: AnswerSeconds; categories: QuestionCategory[]; difficulties: Difficulty[]; targetCount: number },
+    payload: {
+      answerSeconds: AnswerSeconds;
+      categories: QuestionCategory[];
+      difficulties: Difficulty[];
+      careerThemes?: CareerTheme[];
+      targetCount: number;
+    },
     ack: (res: { ok: true; code: string } | { ok: false; error: string }) => void,
   ) => void;
   "room:setTeams": (payload: { assignments: Record<string, TeamKey>; mode: "manual" | "random" }) => void;

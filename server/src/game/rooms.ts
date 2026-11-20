@@ -175,7 +175,11 @@ class RoomManager extends EventEmitter {
       room.questionCache.set(q.id, q);
       this.dispatch(room, { type: "RELEASE_BRACKET_QUESTION", question: q, now: Date.now() });
     } else if (match.phase === "career") {
-      const c = pickRandomCareerQuestion(room.usedCareerQuestionIds);
+      const c = pickRandomCareerQuestion({
+        themes: match.settings.careerThemes ?? [],
+        difficulties: match.settings.difficulties,
+        excludeIds: room.usedCareerQuestionIds,
+      });
       if (!c) throw new EngineError("Nao ha mais carreiras disponiveis no banco de perguntas");
       room.usedCareerQuestionIds.push(c.id);
       room.careerCache.set(c.id, c);

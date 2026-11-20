@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../state/AuthContext";
 import { getSocket } from "../lib/socket";
-import { ANSWER_SECONDS_OPTIONS, type AnswerSeconds, type Difficulty, type QuestionCategory } from "@cobra/shared";
+import { ANSWER_SECONDS_OPTIONS, type AnswerSeconds, type CareerTheme, type Difficulty, type QuestionCategory } from "@cobra/shared";
 import "./Home.css";
 
 const PARTICIPANT_COUNTS = [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
@@ -27,6 +27,20 @@ const CATEGORY_LABELS: Record<QuestionCategory, string> = {
 
 const DIFFICULTIES: Difficulty[] = ["facil", "moderado", "medio", "dificil", "impossivel"];
 
+const CAREER_THEME_LABELS: Record<CareerTheme, string> = {
+  aleatorio: "Aleatorio",
+  brasileiros: "Brasileiros",
+  sul_americanos: "Sul-americanos",
+  europeus: "Europeus",
+  norte_americanos: "Norte-americanos",
+  asiaticos: "Asiaticos",
+  jogadores_de_copa: "Jogadores de Copa do Mundo",
+  campeoes: "Campeoes",
+  idolos: "Idolos / Icons",
+  icones_atuais: "Icones atuais",
+  historicos: "Jogadores historicos",
+};
+
 export default function Home() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
@@ -34,6 +48,7 @@ export default function Home() {
   const [targetCount, setTargetCount] = useState(4);
   const [categories, setCategories] = useState<QuestionCategory[]>(["aleatorio"]);
   const [difficulties, setDifficulties] = useState<Difficulty[]>([]);
+  const [careerThemes, setCareerThemes] = useState<CareerTheme[]>(["aleatorio"]);
   const [joinCode, setJoinCode] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
@@ -44,12 +59,15 @@ export default function Home() {
   function toggleDifficulty(d: Difficulty) {
     setDifficulties((prev) => (prev.includes(d) ? prev.filter((x) => x !== d) : [...prev, d]));
   }
+  function toggleCareerTheme(t: CareerTheme) {
+    setCareerThemes((prev) => (prev.includes(t) ? prev.filter((x) => x !== t) : [...prev, t]));
+  }
 
   function createRoom() {
     setCreating(true);
     setError(null);
     const socket = getSocket();
-    socket.emit("room:create", { answerSeconds, categories, difficulties, targetCount }, (res) => {
+    socket.emit("room:create", { answerSeconds, categories, difficulties, careerThemes, targetCount }, (res) => {
       setCreating(false);
       if (res.ok) navigate(`/sala/${res.code}/jogador`);
       else setError(res.error);
@@ -123,6 +141,21 @@ export default function Home() {
               {DIFFICULTIES.map((d) => (
                 <button type="button" key={d} className={`chip ${difficulties.includes(d) ? "is-active" : ""}`} onClick={() => toggleDifficulty(d)}>
                   {d}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div className="field">
+            <label>Tema do Desafio das Carreiras</label>
+            <div className="chip-grid">
+              {(Object.keys(CAREER_THEME_LABELS) as CareerTheme[]).map((t) => (
+                <button
+                  type="button"
+                  key={t}
+                  className={`chip ${careerThemes.includes(t) ? "is-active" : ""}`}
+                  onClick={() => toggleCareerTheme(t)}
+                >
+                  {CAREER_THEME_LABELS[t]}
                 </button>
               ))}
             </div>

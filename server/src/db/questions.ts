@@ -1,4 +1,4 @@
-import type { CareerQuestion, Difficulty, Question, QuestionCategory, QuestionFormat } from "@cobra/shared";
+import type { CareerQuestion, CareerTheme, Difficulty, Question, QuestionCategory, QuestionFormat } from "@cobra/shared";
 import { nanoid } from "nanoid";
 import { db } from "./db.js";
 
@@ -324,6 +324,11 @@ interface CareerRow {
   player_name: string;
   accepted_answers_json: string | null;
   created_at: number;
+  theme: CareerTheme | null;
+  difficulty: Difficulty | null;
+  source_url: string | null;
+  season_ref: string | null;
+  status: QuestionStatus;
 }
 
 function rowToCareer(r: CareerRow): CareerQuestion {
@@ -332,23 +337,65 @@ function rowToCareer(r: CareerRow): CareerQuestion {
     clubs: JSON.parse(r.clubs_json),
     playerName: r.player_name,
     acceptedAnswers: r.accepted_answers_json ? JSON.parse(r.accepted_answers_json) : undefined,
+    theme: r.theme ?? undefined,
+    difficulty: r.difficulty ?? undefined,
+    sourceUrl: r.source_url ?? undefined,
+    seasonRef: r.season_ref ?? undefined,
   };
 }
 
 export function insertCareerQuestion(c: Omit<CareerQuestion, "id">): CareerQuestion {
   const id = nanoid();
   db.prepare(
-    `INSERT INTO career_questions (id, clubs_json, player_name, accepted_answers_json, created_at) VALUES (?, ?, ?, ?, ?)`,
-  ).run(id, JSON.stringify(c.clubs), c.playerName, c.acceptedAnswers ? JSON.stringify(c.acceptedAnswers) : null, Date.now());
+    `INSERT INTO career_questions (id, clubs_json, player_name, accepted_answers_json, created_at, theme, difficulty, source_url, season_ref)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+  ).run(
+    id,
+    JSON.stringify(c.clubs),
+    c.playerName,
+    c.acceptedAnswers ? JSON.stringify(c.acceptedAnswers) : null,
+    Date.now(),
+    c.theme ?? null,
+    c.difficulty ?? null,
+    c.sourceUrl ?? null,
+    c.seasonRef ?? null,
+  );
   return rowToCareer(db.prepare("SELECT * FROM career_questions WHERE id = ?").get(id) as unknown as CareerRow);
 }
 
-export function listCareerQuestions(): CareerQuestion[] {
-  return (db.prepare("SELECT * FROM career_questions").all() as unknown as CareerRow[]).map(rowToCareer);
+/** No status filter given -> only "approved", same convention as
+ * listQuestions (every pre-existing row defaults to 'approved'). */
+export function listCareerQuestions(filter: { status?: QuestionStatus } = {}): CareerQuestion[] {
+  return (
+    db.prepare("SELECT * FROM career_questions WHERE status = ?").all(filter.status ?? "approved") as unknown as CareerRow[]
+  ).map(rowToCareer);
 }
 
-export function pickRandomCareerQuestion(excludeIds: string[]): CareerQuestion | null {
-  const pool = listCareerQuestions().filter((c) => !excludeIds.includes(c.id));
+/** One-time backfill for rows inserted by an older version of the seed,
+ * before theme/difficulty existed as columns: fills them in by player
+ * name without ever overwriting a value already set (COALESCE), so an
+ * admin's manual edit via the CRUD is never clobbered. Safe to call on
+ * every boot -- a no-op once every row is already tagged. */
+export function backfillCareerMetadata(playerName: string, theme: CareerTheme | undefined, difficulty: Difficulty | undefined): void {
+  db.prepare("UPDATE career_questions SET theme = COALESCE(theme, ?), difficulty = COALESCE(difficulty, ?) WHERE player_name = ?").run(
+    theme ?? null,
+    difficulty ?? null,
+    playerName,
+  );
+}
+
+export function pickRandomCareerQuestion(opts: {
+  themes: CareerTheme[];
+  difficulties: Difficulty[];
+  excludeIds: string[];
+}): CareerQuestion | null {
+  const wantsRandomTheme = opts.themes.length === 0 || opts.themes.includes("aleatorio");
+  const pool = listCareerQuestions().filter((c) => {
+    if (opts.excludeIds.includes(c.id)) return false;
+    if (!wantsRandomTheme && (!c.theme || !opts.themes.includes(c.theme))) return false;
+    if (opts.difficulties.length > 0 && (!c.difficulty || !opts.difficulties.includes(c.difficulty))) return false;
+    return true;
+  });
   if (pool.length === 0) return null;
   return pool[Math.floor(Math.random() * pool.length)];
 }

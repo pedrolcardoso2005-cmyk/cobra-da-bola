@@ -32,6 +32,23 @@ export type QuestionFormat =
   | "sequencia"
   | "multipla_escolha";
 
+/** Theme for the Desafio das Carreiras (career-guessing round), grouped by
+ * the target player's nationality/region or era/stature -- deliberately a
+ * small, separate list from QuestionCategory: questions are grouped by
+ * subject/competition, careers by the player themselves. */
+export type CareerTheme =
+  | "brasileiros"
+  | "sul_americanos"
+  | "europeus"
+  | "norte_americanos"
+  | "asiaticos"
+  | "jogadores_de_copa"
+  | "campeoes"
+  | "idolos"
+  | "icones_atuais"
+  | "historicos"
+  | "aleatorio";
+
 export interface Question {
   id: string;
   category: QuestionCategory;
@@ -59,6 +76,12 @@ export interface CareerQuestion {
   clubs: string[];
   playerName: string;
   acceptedAnswers?: string[];
+  theme?: CareerTheme;
+  difficulty?: Difficulty;
+  /** URL of the source the clubs/years were checked against. */
+  sourceUrl?: string;
+  /** Season/era the career facts refer to, when relevant. */
+  seasonRef?: string;
 }
 
 export type PlayerButtonState =
@@ -162,6 +185,10 @@ export interface MatchSettings {
   answerSeconds: AnswerSeconds;
   categories: QuestionCategory[];
   difficulties: Difficulty[];
+  /** Themes for the Desafio das Carreiras; same "aleatorio"/empty-array
+   * convention as `categories` (any theme). Optional so existing settings
+   * objects built before this field existed still type-check. */
+  careerThemes?: CareerTheme[];
   kind: MatchKind;
   /** Exact number of players the room needs; the match starts
    * automatically (server-authoritative, no host action required) the

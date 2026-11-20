@@ -5,8 +5,8 @@
 // wrong, and avoids inventing statistics. Use the presenter panel's
 // question CRUD (or insertQuestion/insertCareerQuestion) to keep growing
 // this bank; nothing here is meant to be exhaustive.
-import { insertCareerQuestion, insertQuestion, listQuestions, listCareerQuestions } from "../db/questions.js";
-import type { Difficulty, Question, QuestionCategory } from "@cobra/shared";
+import { backfillCareerMetadata, insertCareerQuestion, insertQuestion, listQuestions, listCareerQuestions } from "../db/questions.js";
+import type { CareerQuestion, Difficulty, Question, QuestionCategory } from "@cobra/shared";
 import { pathToFileURL } from "node:url";
 
 type SeedQuestion = Omit<Question, "id">;
@@ -196,23 +196,40 @@ const questions: SeedQuestion[] = [
   ),
 ];
 
-const careerQuestions: { clubs: string[]; playerName: string; acceptedAnswers?: string[] }[] = [
-  { clubs: ["Santos", "Barcelona", "Paris Saint-Germain", "Al-Hilal"], playerName: "Neymar", acceptedAnswers: ["neymar jr"] },
-  { clubs: ["Santos", "New York Cosmos"], playerName: "Pele", acceptedAnswers: ["pelé"] },
+type SeedCareer = Omit<CareerQuestion, "id">;
+
+// theme = target player's nationality/region (see CareerTheme in
+// @cobra/shared); difficulty = how well-known the player is, not how many
+// clubs are shown (per the project brief). Both are editorial judgment
+// calls on well-established players, same spirit as the question seed
+// above -- not a source of invented facts (clubs/nationality are public
+// record), just a first pass at tagging; adjustable later via the
+// existing /api/perguntas/carreiras CRUD.
+const careerQuestions: SeedCareer[] = [
+  { clubs: ["Santos", "Barcelona", "Paris Saint-Germain", "Al-Hilal"], playerName: "Neymar", acceptedAnswers: ["neymar jr"], theme: "brasileiros", difficulty: "facil" },
+  { clubs: ["Santos", "New York Cosmos"], playerName: "Pele", acceptedAnswers: ["pelé"], theme: "brasileiros", difficulty: "facil" },
   {
     clubs: ["Sporting CP", "Manchester United", "Real Madrid", "Juventus"],
     playerName: "Cristiano Ronaldo",
     acceptedAnswers: ["cr7", "cristiano"],
+    theme: "europeus",
+    difficulty: "facil",
   },
-  { clubs: ["Barcelona", "Paris Saint-Germain", "Inter Miami"], playerName: "Lionel Messi", acceptedAnswers: ["messi"] },
-  { clubs: ["Cannes", "Bordeaux", "Juventus", "Real Madrid"], playerName: "Zinedine Zidane", acceptedAnswers: ["zidane", "zizou"] },
-  { clubs: ["Gremio", "Paris Saint-Germain", "Barcelona", "AC Milan"], playerName: "Ronaldinho Gaucho", acceptedAnswers: ["ronaldinho"] },
-  { clubs: ["Sao Paulo", "AC Milan", "Real Madrid"], playerName: "Kaka", acceptedAnswers: ["kaká", "ricardo kaka"] },
-  { clubs: ["Cruzeiro", "PSV Eindhoven", "Barcelona", "Inter de Milao"], playerName: "Ronaldo Nazario", acceptedAnswers: ["ronaldo", "ronaldo fenomeno"] },
-  { clubs: ["Manchester United", "Real Madrid", "LA Galaxy"], playerName: "David Beckham", acceptedAnswers: ["beckham"] },
-  { clubs: ["Argentinos Juniors", "Boca Juniors", "Barcelona", "Napoli"], playerName: "Diego Maradona", acceptedAnswers: ["maradona"] },
-  { clubs: ["Sporting CP", "Barcelona", "Real Madrid", "Inter de Milao"], playerName: "Luis Figo", acceptedAnswers: ["figo"] },
-  { clubs: ["Monaco", "Arsenal", "Barcelona"], playerName: "Thierry Henry", acceptedAnswers: ["henry"] },
+  { clubs: ["Barcelona", "Paris Saint-Germain", "Inter Miami"], playerName: "Lionel Messi", acceptedAnswers: ["messi"], theme: "sul_americanos", difficulty: "facil" },
+  { clubs: ["Cannes", "Bordeaux", "Juventus", "Real Madrid"], playerName: "Zinedine Zidane", acceptedAnswers: ["zidane", "zizou"], theme: "europeus", difficulty: "moderado" },
+  { clubs: ["Gremio", "Paris Saint-Germain", "Barcelona", "AC Milan"], playerName: "Ronaldinho Gaucho", acceptedAnswers: ["ronaldinho"], theme: "brasileiros", difficulty: "moderado" },
+  { clubs: ["Sao Paulo", "AC Milan", "Real Madrid"], playerName: "Kaka", acceptedAnswers: ["kaká", "ricardo kaka"], theme: "brasileiros", difficulty: "medio" },
+  {
+    clubs: ["Cruzeiro", "PSV Eindhoven", "Barcelona", "Inter de Milao"],
+    playerName: "Ronaldo Nazario",
+    acceptedAnswers: ["ronaldo", "ronaldo fenomeno"],
+    theme: "brasileiros",
+    difficulty: "moderado",
+  },
+  { clubs: ["Manchester United", "Real Madrid", "LA Galaxy"], playerName: "David Beckham", acceptedAnswers: ["beckham"], theme: "europeus", difficulty: "moderado" },
+  { clubs: ["Argentinos Juniors", "Boca Juniors", "Barcelona", "Napoli"], playerName: "Diego Maradona", acceptedAnswers: ["maradona"], theme: "sul_americanos", difficulty: "facil" },
+  { clubs: ["Sporting CP", "Barcelona", "Real Madrid", "Inter de Milao"], playerName: "Luis Figo", acceptedAnswers: ["figo"], theme: "europeus", difficulty: "medio" },
+  { clubs: ["Monaco", "Arsenal", "Barcelona"], playerName: "Thierry Henry", acceptedAnswers: ["henry"], theme: "europeus", difficulty: "medio" },
 ];
 
 export function seedDatabase(): { insertedQuestions: number; insertedCareers: number } {
@@ -231,6 +248,11 @@ export function seedDatabase(): { insertedQuestions: number; insertedCareers: nu
       insertCareerQuestion(c);
       insertedCareers++;
     }
+  } else {
+    // Rows already existed (e.g. inserted before theme/difficulty were
+    // added) -- fill in just those two columns by player name, never
+    // overwriting a value that's already set.
+    for (const c of careerQuestions) backfillCareerMetadata(c.playerName, c.theme, c.difficulty);
   }
   return { insertedQuestions, insertedCareers };
 }

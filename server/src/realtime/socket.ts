@@ -48,6 +48,7 @@ export function registerSocketHandlers(io: Server<ClientToServerEvents, ServerTo
           answerSeconds: z.number().refine((v) => (ANSWER_SECONDS_OPTIONS as number[]).includes(v)),
           categories: z.array(z.string()).min(0),
           difficulties: z.array(z.string()).min(0),
+          careerThemes: z.array(z.string()).min(0).optional(),
           targetCount: z.number().int().min(2).max(12),
         });
         const parsed = schema.parse(payload);
@@ -55,6 +56,7 @@ export function registerSocketHandlers(io: Server<ClientToServerEvents, ServerTo
           answerSeconds: parsed.answerSeconds as any,
           categories: parsed.categories as any,
           difficulties: parsed.difficulties as any,
+          careerThemes: parsed.careerThemes as any,
           kind: "casual",
           targetCount: parsed.targetCount,
         });

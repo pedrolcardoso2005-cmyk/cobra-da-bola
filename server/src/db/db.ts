@@ -97,6 +97,21 @@ for (const [col, ddl] of [
   if (!questionCols.includes(col)) db.exec(ddl);
 }
 
+// Additive migration: same idiom as the questions table above, for the
+// Desafio das Carreiras metadata (theme/difficulty/source/season/status).
+// NULL theme/difficulty on existing rows means "any" when filtering --
+// same "unset = aleatorio" convention already used for question filters.
+const careerCols = (db.prepare("PRAGMA table_info(career_questions)").all() as unknown as { name: string }[]).map((c) => c.name);
+for (const [col, ddl] of [
+  ["theme", "ALTER TABLE career_questions ADD COLUMN theme TEXT"],
+  ["difficulty", "ALTER TABLE career_questions ADD COLUMN difficulty TEXT"],
+  ["source_url", "ALTER TABLE career_questions ADD COLUMN source_url TEXT"],
+  ["season_ref", "ALTER TABLE career_questions ADD COLUMN season_ref TEXT"],
+  ["status", "ALTER TABLE career_questions ADD COLUMN status TEXT NOT NULL DEFAULT 'approved'"],
+] as const) {
+  if (!careerCols.includes(col)) db.exec(ddl);
+}
+
 // AI-generated question pipeline: embeddings for semantic dedupe, and a log
 // of each generation batch for auditing/cost tracking. Both are additive and
 // unused by the existing game/question-CRUD flow.

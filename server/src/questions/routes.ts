@@ -52,6 +52,24 @@ const careerSchema = z.object({
   clubs: z.array(z.string().min(1)).min(2).max(8),
   playerName: z.string().min(2).max(100),
   acceptedAnswers: z.array(z.string()).optional(),
+  theme: z
+    .enum([
+      "brasileiros",
+      "sul_americanos",
+      "europeus",
+      "norte_americanos",
+      "asiaticos",
+      "jogadores_de_copa",
+      "campeoes",
+      "idolos",
+      "icones_atuais",
+      "historicos",
+      "aleatorio",
+    ])
+    .optional(),
+  difficulty: z.enum(["facil", "moderado", "medio", "dificil", "impossivel"]).optional(),
+  sourceUrl: z.string().url().optional(),
+  seasonRef: z.string().min(1).max(50).optional(),
 });
 
 questionsRouter.post("/carreiras", requireAuth, (req, res) => {
