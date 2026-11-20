@@ -86,6 +86,7 @@ function useActions(socket: ReturnType<typeof getSocket>, code: string | undefin
   const endMatch = useCallback(() => socket.emit("host:endMatch"), [socket]);
   const buzz = useCallback((questionId: string) => socket.emit("player:buzz", { questionId, clientSentAt: Date.now() }), [socket]);
   const submitAnswer = useCallback((questionId: string, answer: string) => socket.emit("player:submitAnswer", { questionId, answer }), [socket]);
+  const requestSkip = useCallback(() => socket.emit("player:requestSkip"), [socket]);
 
   return {
     code,
@@ -105,5 +106,6 @@ function useActions(socket: ReturnType<typeof getSocket>, code: string | undefin
     endMatch,
     buzz,
     submitAnswer,
+    requestSkip,
   };
 }

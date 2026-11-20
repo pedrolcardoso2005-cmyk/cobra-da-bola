@@ -54,6 +54,20 @@ export default function PlayerView() {
   const revealInterrupted = frozenWordCount != null && frozenWordCount < words.length;
   const interruptedBy = revealInterrupted ? match?.players.find((p) => p.id === buzz?.firstPlayerId)?.displayName : undefined;
 
+  // Mutual-consent skip (Fase 1/semifinal/final only -- career keeps the
+  // presenter's existing "encerrar carreira"): only offered pre-buzz, to
+  // the round's own representatives, and never locks the answer timer
+  // (there's nothing running yet at this point). The server resolves it
+  // the instant both have asked, so this is read straight off buzz state
+  // rather than tracked locally.
+  const selfId = playerView?.self.id;
+  const skipRequestedBy = buzz?.skipRequestedBy ?? [];
+  const selfRequestedSkip = !!selfId && skipRequestedBy.includes(selfId);
+  const otherSkipRequesterId = selfId ? skipRequestedBy.find((id) => id !== selfId) : undefined;
+  const otherSkipRequesterName = otherSkipRequesterId
+    ? match?.players.find((p) => p.id === otherSkipRequesterId)?.displayName
+    : undefined;
+
   useEffect(() => {
     const st = playerView?.myButtonState;
     if (st && st !== prevButtonState.current) {
@@ -142,6 +156,24 @@ export default function PlayerView() {
               <p className="error-text">
                 A pergunta foi interrompida porque {interruptedBy === self.displayName ? "voce respondeu" : `${interruptedBy ?? "alguem"} respondeu`} antes de ela terminar.
               </p>
+            )}
+          </div>
+        )}
+
+        {match.lastAnswer?.skipped && (
+          <p className="player-view__note">Pergunta pulada de comum acordo -- ninguem pontuou.</p>
+        )}
+
+        {playerView.myButtonState === "armed" && !buzz?.firstPlayerId && (
+          <div className="player-skip">
+            {otherSkipRequesterName ? (
+              <button className="btn btn-ghost" onClick={actions.requestSkip}>
+                {otherSkipRequesterName} pediu para pular -- concordar e pular tambem
+              </button>
+            ) : selfRequestedSkip ? (
+              <p className="player-view__note">Voce pediu para pular. Aguardando o outro representante concordar...</p>
+            ) : (
+              <button className="btn btn-ghost" onClick={actions.requestSkip}>Pedir para pular esta pergunta</button>
             )}
           </div>
         )}

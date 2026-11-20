@@ -137,6 +137,7 @@ export function registerSocketHandlers(io: Server<ClientToServerEvents, ServerTo
     socket.on("player:submitAnswer", (payload) =>
       guarded(socket, () => roomManager.submitAnswer(socket.data.code!, socket.data.playerId!, payload.answer)),
     );
+    socket.on("player:requestSkip", () => guarded(socket, () => roomManager.requestSkip(socket.data.code!, socket.data.playerId!)));
 
     socket.on("matchmaking:enter", (payload, ack) => {
       try {

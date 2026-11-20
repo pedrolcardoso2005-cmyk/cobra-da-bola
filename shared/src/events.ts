@@ -46,6 +46,10 @@ export interface ClientToServerEvents {
 
   "player:buzz": (payload: { questionId: string; clientSentAt: number }) => void;
   "player:submitAnswer": (payload: { questionId: string; answer: string }) => void;
+  /** Only this round's eligible representatives (fase 1/semifinal/final) may
+   * send this, and only before anyone has buzzed. Resolved as soon as both
+   * have asked (or the other one is disconnected) -- see BuzzState.skipRequestedBy. */
+  "player:requestSkip": () => void;
 
   "matchmaking:enter": (
     payload: { targetCount: number; answerSeconds: AnswerSeconds },

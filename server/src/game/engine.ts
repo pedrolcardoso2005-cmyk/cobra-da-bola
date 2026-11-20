@@ -103,6 +103,19 @@ export function applyAction(input: MatchState, action: EngineAction): MatchState
     case "SET_CONNECTED": {
       const p = state.players.find((pl) => pl.id === action.playerId);
       if (p) p.connected = action.connected;
+      // Never leave a pending skip request waiting on a representative who
+      // just disconnected and can't respond -- resolve it in favor of
+      // skipping, exactly as if they had agreed.
+      if (!action.connected && (state.phase === "phase1" || state.phase === "semifinal" || state.phase === "final")) {
+        const buzz = activeBuzz(state);
+        if (buzz && !buzz.firstPlayerId && buzz.skipRequestedBy.length > 0) {
+          const eligible = eligibleBuzzers(state);
+          const otherRequested = buzz.skipRequestedBy.some((id) => id !== action.playerId);
+          if (eligible.includes(action.playerId) && otherRequested) {
+            resolveSkip(state);
+          }
+        }
+      }
       return state;
     }
 
@@ -267,6 +280,31 @@ export function applyAction(input: MatchState, action: EngineAction): MatchState
       return state;
     }
 
+    case "REQUEST_SKIP": {
+      if (state.phase !== "phase1" && state.phase !== "semifinal" && state.phase !== "final") {
+        throw new EngineError(`Acao invalida na fase atual (${state.phase})`);
+      }
+      const buzz = activeBuzz(state);
+      if (!buzz || buzz.questionOpenedAt == null) {
+        throw new EngineError("Nao ha pergunta sendo apresentada");
+      }
+      if (buzz.firstPlayerId) {
+        throw new EngineError("Alguem ja apertou o botao -- nao e mais possivel pedir para pular");
+      }
+      const eligible = eligibleBuzzers(state);
+      if (!eligible.includes(action.playerId)) {
+        throw new EngineError("Apenas os representantes desta rodada podem pedir para pular");
+      }
+      if (!buzz.skipRequestedBy.includes(action.playerId)) {
+        buzz.skipRequestedBy.push(action.playerId);
+        pushHistory(state, "skip_request", `${findPlayer(state, action.playerId).displayName} pediu para pular esta pergunta`);
+      }
+      const other = eligible.find((id) => id !== action.playerId);
+      const otherAgreedOrGone = !other || buzz.skipRequestedBy.includes(other) || !findPlayer(state, other).connected;
+      if (otherAgreedOrGone) resolveSkip(state);
+      return state;
+    }
+
     case "SUBMIT_ANSWER": {
       const buzz = activeBuzz(state);
       if (!buzz || buzz.firstPlayerId !== action.playerId) {
@@ -277,6 +315,7 @@ export function applyAction(input: MatchState, action: EngineAction): MatchState
         submittedAnswer: action.answer,
         correct: false,
         timedOut: false,
+        skipped: false,
         pointsAwardedTo: null,
       };
       if (state.timer) state.timer.endsAt = null;
@@ -384,7 +423,26 @@ function requirePhase(state: MatchState, phase: MatchState["phase"]): void {
 }
 
 function emptyBuzz() {
-  return { questionOpenedAt: null, armed: false, firstPlayerId: null, buzzOrder: [], lockedOut: [], frozenWordCount: null };
+  return { questionOpenedAt: null, armed: false, firstPlayerId: null, buzzOrder: [], lockedOut: [], frozenWordCount: null, skipRequestedBy: [] };
+}
+
+/** Ends the current phase1/semifinal/final round with no points awarded to
+ * anyone, because its two representatives mutually agreed to skip it (or
+ * one did and the other is disconnected and can't respond). Never used for
+ * career -- the presenter's existing END_CAREER_ROUND already covers "no
+ * one knew it" there. */
+function resolveSkip(state: MatchState): void {
+  if (state.phase === "phase1" && state.phase1) {
+    state.phase1.buzz = emptyBuzz();
+  } else if ((state.phase === "semifinal" || state.phase === "final") && state.bracketRound) {
+    state.bracketRound.buzz = emptyBuzz();
+  } else {
+    return;
+  }
+  if (state.timer) state.timer.endsAt = null;
+  state.lastAnswer = { playerId: null, submittedAnswer: null, correct: false, timedOut: false, skipped: true, pointsAwardedTo: null };
+  state.presenterCue = { type: "idle" };
+  pushHistory(state, "skip", "Pergunta pulada de comum acordo entre os representantes");
 }
 
 export function activeBuzz(state: MatchState) {
@@ -403,13 +461,13 @@ function applyJudgement(state: MatchState, playerId: string, correct: boolean, t
     if (correct) {
       team.score += 1;
       player.correctAnswers += 1;
-      state.lastAnswer = { playerId, submittedAnswer: state.lastAnswer?.submittedAnswer ?? null, correct: true, timedOut, pointsAwardedTo: team.id };
+      state.lastAnswer = { playerId, submittedAnswer: state.lastAnswer?.submittedAnswer ?? null, correct: true, timedOut, skipped: false, pointsAwardedTo: team.id };
       state.presenterCue = { type: "correct", playerId };
       pushHistory(state, "judge", `${player.displayName} acertou (+1 Equipe ${team.id})`);
     } else {
       other.score += 1;
       player.wrongAnswers += 1;
-      state.lastAnswer = { playerId, submittedAnswer: state.lastAnswer?.submittedAnswer ?? null, correct: false, timedOut, pointsAwardedTo: other.id };
+      state.lastAnswer = { playerId, submittedAnswer: state.lastAnswer?.submittedAnswer ?? null, correct: false, timedOut, skipped: false, pointsAwardedTo: other.id };
       state.presenterCue = { type: "wrong", playerId };
       pushHistory(state, "judge", `${player.displayName} errou (+1 Equipe ${other.id})`);
     }
@@ -432,7 +490,7 @@ function applyJudgement(state: MatchState, playerId: string, correct: boolean, t
       player.careerRank = rank;
       state.careerResults.push({ playerId, rank });
       c.eligiblePlayerIds = c.eligiblePlayerIds.filter((id) => id !== playerId);
-      state.lastAnswer = { playerId, submittedAnswer: state.lastAnswer?.submittedAnswer ?? null, correct: true, timedOut, pointsAwardedTo: "career" };
+      state.lastAnswer = { playerId, submittedAnswer: state.lastAnswer?.submittedAnswer ?? null, correct: true, timedOut, skipped: false, pointsAwardedTo: "career" };
       state.presenterCue = { type: "qualified", playerId };
       pushHistory(state, "judge", `${player.displayName} acertou a carreira (classificado em ${rank}o)`);
 
@@ -453,7 +511,7 @@ function applyJudgement(state: MatchState, playerId: string, correct: boolean, t
       // Kept truthy just long enough for the UI to show the "errou" result;
       // the next PLAYER_BUZZ (re-armed above) clears it so the next
       // contender isn't blocked from answering by this stale result.
-      state.lastAnswer = { playerId, submittedAnswer: state.lastAnswer?.submittedAnswer ?? null, correct: false, timedOut, pointsAwardedTo: "career" };
+      state.lastAnswer = { playerId, submittedAnswer: state.lastAnswer?.submittedAnswer ?? null, correct: false, timedOut, skipped: false, pointsAwardedTo: "career" };
       state.presenterCue = { type: "wrong", playerId };
       pushHistory(state, "judge", `${player.displayName} errou nesta carreira`);
     }
@@ -467,14 +525,14 @@ function applyJudgement(state: MatchState, playerId: string, correct: boolean, t
     if (isA) bracket.scoreA += 1;
     else bracket.scoreB += 1;
     player.correctAnswers += 1;
-    state.lastAnswer = { playerId, submittedAnswer: state.lastAnswer?.submittedAnswer ?? null, correct: true, timedOut, pointsAwardedTo: "player" };
+    state.lastAnswer = { playerId, submittedAnswer: state.lastAnswer?.submittedAnswer ?? null, correct: true, timedOut, skipped: false, pointsAwardedTo: "player" };
     state.presenterCue = { type: "correct", playerId };
     pushHistory(state, "judge", `${player.displayName} acertou (+1)`);
   } else {
     if (isA) bracket.scoreB += 1;
     else bracket.scoreA += 1;
     player.wrongAnswers += 1;
-    state.lastAnswer = { playerId, submittedAnswer: state.lastAnswer?.submittedAnswer ?? null, correct: false, timedOut, pointsAwardedTo: "opponent" };
+    state.lastAnswer = { playerId, submittedAnswer: state.lastAnswer?.submittedAnswer ?? null, correct: false, timedOut, skipped: false, pointsAwardedTo: "opponent" };
     state.presenterCue = { type: "wrong", playerId };
     pushHistory(state, "judge", `${player.displayName} errou (+1 adversario)`);
   }

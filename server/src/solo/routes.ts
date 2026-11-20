@@ -45,6 +45,16 @@ soloRouter.post("/pergunta/responder", requireAuth, (req, res) => {
   res.json({ correct, correctAnswer: q.correctAnswer, acceptedAnswers: q.acceptedAnswers, explanation: q.explanation ?? null });
 });
 
+const skipQuestionSchema = z.object({ questionId: z.string().min(1) });
+
+soloRouter.post("/pergunta/pular", requireAuth, (req, res) => {
+  const parsed = skipQuestionSchema.safeParse(req.body);
+  if (!parsed.success) return res.status(400).json({ error: "Dados invalidos" });
+  const q = getApprovedQuestionById(parsed.data.questionId);
+  if (!q) return res.status(404).json({ error: "Pergunta nao encontrada" });
+  res.json({ correctAnswer: q.correctAnswer, acceptedAnswers: q.acceptedAnswers, explanation: q.explanation ?? null });
+});
+
 soloRouter.get("/carreira", requireAuth, (req, res) => {
   const themes = csv(req.query.themes) as CareerTheme[];
   const difficulties = csv(req.query.difficulties) as Difficulty[];
@@ -65,4 +75,14 @@ soloRouter.post("/carreira/responder", requireAuth, (req, res) => {
   if (!c) return res.status(404).json({ error: "Carreira nao encontrada" });
   const correct = answersMatch(parsed.data.answer, c.playerName, c.acceptedAnswers);
   res.json({ correct, playerName: c.playerName, acceptedAnswers: c.acceptedAnswers ?? null });
+});
+
+const skipCareerSchema = z.object({ careerId: z.string().min(1) });
+
+soloRouter.post("/carreira/pular", requireAuth, (req, res) => {
+  const parsed = skipCareerSchema.safeParse(req.body);
+  if (!parsed.success) return res.status(400).json({ error: "Dados invalidos" });
+  const c = getApprovedCareerById(parsed.data.careerId);
+  if (!c) return res.status(404).json({ error: "Carreira nao encontrada" });
+  res.json({ playerName: c.playerName, acceptedAnswers: c.acceptedAnswers ?? null });
 });

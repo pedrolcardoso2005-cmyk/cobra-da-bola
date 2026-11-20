@@ -236,6 +236,11 @@ class RoomManager extends EventEmitter {
     this.dispatch(room, { type: "SUBMIT_ANSWER", playerId, answer });
   }
 
+  requestSkip(code: string, playerId: string): void {
+    const room = this.mustGet(code);
+    this.dispatch(room, { type: "REQUEST_SKIP", playerId });
+  }
+
   hostJudge(code: string, playerId: string, correct: boolean): void {
     const room = this.mustGet(code);
     this.snapshot(room);

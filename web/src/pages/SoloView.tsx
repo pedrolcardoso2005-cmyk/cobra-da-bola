@@ -20,12 +20,16 @@ interface AnswerResult {
   correctAnswer: string;
   acceptedAnswers?: string[];
   explanation: string | null;
+  /** True when this came from "Pular" rather than a graded answer: no
+   * points awarded, shown neutrally instead of acertou/errou. */
+  skipped?: boolean;
 }
 
 interface CareerAnswerResult {
   correct: boolean;
   playerName: string;
   acceptedAnswers: string[] | null;
+  skipped?: boolean;
 }
 
 export default function SoloView() {
@@ -39,7 +43,7 @@ export default function SoloView() {
   const [seenQuestionIds, setSeenQuestionIds] = useState<string[]>([]);
   const [answer, setAnswer] = useState("");
   const [result, setResult] = useState<AnswerResult | null>(null);
-  const [score, setScore] = useState({ correct: 0, wrong: 0 });
+  const [score, setScore] = useState({ correct: 0, wrong: 0, skipped: 0 });
   const [champion, setChampion] = useState(false);
   const [loading, setLoading] = useState(false);
 
@@ -113,8 +117,20 @@ export default function SoloView() {
     setSeenQuestionIds((prev) => [...prev, question.id]);
   }
 
+  async function skipQuestion() {
+    if (!question) return;
+    setSoloFrozen(true);
+    const data = await api.post<{ correctAnswer: string; acceptedAnswers?: string[]; explanation: string | null }>(
+      "/api/solo/pergunta/pular",
+      { questionId: question.id },
+    );
+    setResult({ correct: false, correctAnswer: data.correctAnswer, acceptedAnswers: data.acceptedAnswers, explanation: data.explanation, skipped: true });
+    setScore((prev) => ({ ...prev, skipped: prev.skipped + 1 }));
+    setSeenQuestionIds((prev) => [...prev, question.id]);
+  }
+
   function startQuestions() {
-    setScore({ correct: 0, wrong: 0 });
+    setScore({ correct: 0, wrong: 0, skipped: 0 });
     setChampion(false);
     setSeenQuestionIds([]);
     void loadNextQuestion([]);
@@ -149,6 +165,17 @@ export default function SoloView() {
     const data = await api.post<CareerAnswerResult>("/api/solo/carreira/responder", { careerId: career.id, answer: careerAnswer.trim() });
     setCareerResult(data);
     setCareerScore((prev) => ({ ...prev, correct: data.correct ? prev.correct + 1 : prev.correct }));
+    setSeenCareerIds((prev) => [...prev, career.id]);
+  }
+
+  async function skipCareer() {
+    if (!career) return;
+    const data = await api.post<{ playerName: string; acceptedAnswers: string[] | null }>(
+      "/api/solo/carreira/pular",
+      { careerId: career.id },
+    );
+    setCareerResult({ correct: false, playerName: data.playerName, acceptedAnswers: data.acceptedAnswers, skipped: true });
+    setCareerScore((prev) => ({ ...prev, skipped: prev.skipped + 1 }));
     setSeenCareerIds((prev) => [...prev, career.id]);
   }
 
@@ -228,7 +255,7 @@ export default function SoloView() {
           <section className="panel sticker home-card solo-play">
             <div className="row-between">
               <h2 className="font-display">Perguntas</h2>
-              <span className="font-score solo-score">{score.correct} acertos - {score.wrong} erros</span>
+              <span className="font-score solo-score">{score.correct} acertos - {score.wrong} erros - {score.skipped} puladas</span>
             </div>
 
             {champion ? (
@@ -274,9 +301,14 @@ export default function SoloView() {
                     <button className="btn btn-primary" type="submit" disabled={!!result || !answer.trim()}>Responder</button>
                   </form>
                 )}
+                {!result && (
+                  <button type="button" className="btn btn-ghost" onClick={() => void skipQuestion()}>
+                    Pular (revelar resposta)
+                  </button>
+                )}
                 {result && (
-                  <div className={`solo-feedback ${result.correct ? "is-correct" : "is-wrong"}`}>
-                    <strong>{result.correct ? "Acertou!" : "Errou."}</strong> Resposta correta: {result.correctAnswer}
+                  <div className={`solo-feedback ${result.skipped ? "" : result.correct ? "is-correct" : "is-wrong"}`}>
+                    <strong>{result.skipped ? "Pulada." : result.correct ? "Acertou!" : "Errou."}</strong> Resposta correta: {result.correctAnswer}
                     {result.explanation && <p className="solo-feedback__note">{result.explanation}</p>}
                   </div>
                 )}
@@ -294,7 +326,7 @@ export default function SoloView() {
           <section className="panel sticker home-card solo-play">
             <div className="row-between">
               <h2 className="font-display">Desafio das Carreiras</h2>
-              <span className="font-score solo-score">{careerScore.correct} acertos</span>
+              <span className="font-score solo-score">{careerScore.correct} acertos - {careerScore.skipped} puladas</span>
             </div>
 
             {!career ? (
@@ -313,7 +345,10 @@ export default function SoloView() {
                 {!careerResult && (
                   <div className="row">
                     <button className="btn btn-bote" disabled={revealedCount >= career.clubs.length} onClick={revealNextClub}>
-                      Pular (revelar proximo clube)
+                      Revelar proximo clube
+                    </button>
+                    <button type="button" className="btn btn-ghost" onClick={() => void skipCareer()}>
+                      Pular (revelar resposta)
                     </button>
                   </div>
                 )}
@@ -332,8 +367,8 @@ export default function SoloView() {
                 )}
 
                 {careerResult && (
-                  <div className={`solo-feedback ${careerResult.correct ? "is-correct" : "is-wrong"}`}>
-                    <strong>{careerResult.correct ? "Acertou!" : "Errou."}</strong> Era: {careerResult.playerName}
+                  <div className={`solo-feedback ${careerResult.skipped ? "" : careerResult.correct ? "is-correct" : "is-wrong"}`}>
+                    <strong>{careerResult.skipped ? "Pulada." : careerResult.correct ? "Acertou!" : "Errou."}</strong> Era: {careerResult.playerName}
                   </div>
                 )}
                 {careerResult && (

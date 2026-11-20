@@ -115,9 +115,11 @@ export default function ScreenView() {
       </main>
 
       {match.lastAnswer && (
-        <div className={`screen-banner hazard-stripes ${match.lastAnswer.correct ? "is-correct" : "is-wrong"}`}>
+        <div className={`screen-banner hazard-stripes ${match.lastAnswer.skipped ? "" : match.lastAnswer.correct ? "is-correct" : "is-wrong"}`}>
           <span className="font-display">
-            {nameOf(match.lastAnswer.playerId)}: {match.lastAnswer.timedOut ? "tempo esgotado" : match.lastAnswer.correct ? "ACERTOU!" : "ERROU!"}
+            {match.lastAnswer.skipped
+              ? "Pulada de comum acordo -- ninguem pontuou"
+              : `${nameOf(match.lastAnswer.playerId!)}: ${match.lastAnswer.timedOut ? "tempo esgotado" : match.lastAnswer.correct ? "ACERTOU!" : "ERROU!"}`}
           </span>
         </div>
       )}

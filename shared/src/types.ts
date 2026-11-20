@@ -142,13 +142,26 @@ export interface BuzzState {
    * of trusting its own local reveal clock, so the frozen fragment is
    * identical for everyone regardless of network latency. */
   frozenWordCount: number | null;
+  /** Player ids (among this round's eligible representatives) who have
+   * asked to skip the current question. Only meaningful pre-buzz (once
+   * someone presses the buzzer, skipping is no longer offered); reset
+   * whenever the buzz itself resets (new question/round). Resolved the
+   * instant every eligible representative is in this list, or the instant
+   * one of them disconnects while a request from the other is pending --
+   * a skip request is never left waiting forever. */
+  skipRequestedBy: string[];
 }
 
 export interface AnswerResult {
-  playerId: string;
+  /** Null only when `skipped` is true: a mutual skip has no single actor. */
+  playerId: string | null;
   submittedAnswer: string | null;
   correct: boolean;
   timedOut: boolean;
+  /** True when the round ended because both representatives agreed to
+   * skip it (or one did and the other disconnected) -- never because of
+   * a right/wrong judgement. No points are awarded either way. */
+  skipped: boolean;
   pointsAwardedTo: TeamKey | "player" | "opponent" | "career" | null;
 }
 

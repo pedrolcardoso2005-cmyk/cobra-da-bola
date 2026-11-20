@@ -18,6 +18,8 @@ export function Phase1Controls({ match, actions, answerKey, question }: any) {
       {buzz.firstPlayerId && !match.lastAnswer && (
         <p>Apertou primeiro: <strong>{nameOf(match, buzz.firstPlayerId)}</strong></p>
       )}
+      <SkipStatus match={match} buzz={buzz} />
+      {match.lastAnswer?.skipped && <p className="player-view__note">Pulada de comum acordo -- sem pontos.</p>}
       {match.lastAnswer && !isJudged(match) && (
         <JudgeButtons actions={actions} playerId={match.lastAnswer.playerId} />
       )}
@@ -73,6 +75,8 @@ export function BracketControls({ match, actions, answerKey, question }: any) {
       )}
       {question && <AnswerKeyCard question={answerKey?.question} prompt={question.prompt} />}
       {buzz?.firstPlayerId && !match.lastAnswer && <p>Apertou primeiro: <strong>{nameOf(match, buzz.firstPlayerId)}</strong></p>}
+      <SkipStatus match={match} buzz={buzz} />
+      {match.lastAnswer?.skipped && <p className="player-view__note">Pulada de comum acordo -- sem pontos.</p>}
       {match.lastAnswer && !isJudged(match) && <JudgeButtons actions={actions} playerId={match.lastAnswer.playerId} />}
       {isJudged(match) && <button className="btn btn-bote" onClick={actions.advance}>Proxima pergunta</button>}
       <ScoreAdjust match={match} actions={actions} />
@@ -121,5 +125,16 @@ export function nameOf(match: any, id: string): string {
 }
 
 export function isJudged(match: any): boolean {
-  return !!match.lastAnswer && match.lastAnswer.pointsAwardedTo !== null;
+  return !!match.lastAnswer && (match.lastAnswer.pointsAwardedTo !== null || match.lastAnswer.skipped);
+}
+
+export function SkipStatus({ match, buzz }: { match: any; buzz: any }) {
+  if (!buzz || buzz.firstPlayerId || match.lastAnswer) return null;
+  const requested: string[] = buzz.skipRequestedBy ?? [];
+  if (requested.length === 0) return null;
+  return (
+    <p className="player-view__note">
+      Pedido(s) de pular: {requested.map((id) => nameOf(match, id)).join(", ")} -- aguardando o outro representante
+    </p>
+  );
 }
