@@ -71,6 +71,32 @@ export default function Home() {
         </section>
 
         <section className="panel sticker home-card">
+          <h3 className="font-display">Entrar com codigo</h3>
+          <p>Peca o codigo da sala ao anfitriao e entre para jogar.</p>
+          <div className="field">
+            <label htmlFor="code">Codigo da sala</label>
+            <input id="code" value={joinCode} onChange={(e) => setJoinCode(e.target.value.toUpperCase())} maxLength={6} />
+          </div>
+          <button className="btn btn-bote btn-block" onClick={joinRoom}>Entrar na sala</button>
+        </section>
+
+        <section className="panel sticker home-card">
+          <h2 className="font-display">Meu historico</h2>
+          <p>Veja seus acertos, erros, puladas e suas ultimas partidas no Modo Solo.</p>
+          <Link className="btn btn-primary btn-block" to="/historico">
+            Meu historico
+          </Link>
+        </section>
+
+        <section className="panel sticker home-card">
+          <h2 className="font-display">Como jogar</h2>
+          <p>Veja as quatro etapas do jogo: perguntas, Desafio das Carreiras, semifinal e final.</p>
+          <Link className="btn btn-primary btn-block" to="/como-jogar">
+            Ver como jogar
+          </Link>
+        </section>
+
+        <section className="panel sticker home-card home-card--wide">
           <h2 className="font-display">Criar partida</h2>
           <div className="field">
             <label>Quantidade exata de participantes</label>
@@ -135,24 +161,6 @@ export default function Home() {
           <p style={{ color: "var(--giz-dim)", fontSize: "0.8rem" }}>
             A partida comeca automaticamente assim que {targetCount} jogadores entrarem -- sem precisar de anfitriao.
           </p>
-
-          <hr className="home-card__divider" />
-
-          <h3 className="font-display">Entrar com codigo</h3>
-          <p>Peca o codigo da sala ao anfitriao e entre para jogar.</p>
-          <div className="field">
-            <label htmlFor="code">Codigo da sala</label>
-            <input id="code" value={joinCode} onChange={(e) => setJoinCode(e.target.value.toUpperCase())} maxLength={6} />
-          </div>
-          <button className="btn btn-bote btn-block" onClick={joinRoom}>Entrar na sala</button>
-        </section>
-
-        <section className="panel sticker home-card">
-          <h2 className="font-display">Como jogar</h2>
-          <p>Veja as quatro etapas do jogo: perguntas, Desafio das Carreiras, semifinal e final.</p>
-          <Link className="btn btn-primary btn-block" to="/como-jogar">
-            Ver como jogar
-          </Link>
         </section>
       </main>
     </div>

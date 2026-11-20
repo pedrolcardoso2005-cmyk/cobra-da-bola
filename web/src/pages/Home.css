@@ -35,6 +35,14 @@
   margin-top: 0;
 }
 
+/* Settings-heavy cards (Criar partida) take the full row instead of
+ * squeezing into the same column width as the compact quick-access cards,
+ * so "Entrar com codigo" and the other highlighted options never end up
+ * hidden below a long settings panel. */
+.home-card--wide {
+  grid-column: 1 / -1;
+}
+
 .home-card__divider {
   border: none;
   border-top: 2px solid var(--escama-60);
