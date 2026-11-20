@@ -141,6 +141,16 @@
   opacity: 1;
 }
 
+/* Same light-card problem as above: .error-text's --bote orange is tuned
+   for the dark page background it's normally shown on (confirmed ~7:1
+   contrast there) but drops to ~2.4:1 on this light card -- a real login
+   error ("E-mail ou senha incorretos") would be hard to read. Darkened to
+   a burnt-orange that stays in the same accent-color family (still reads
+   as a warning, not as plain body text) while clearing 4.5:1 on --giz. */
+.auth-card .error-text {
+  color: #7a3a0a;
+}
+
 .brand-title {
   font-size: clamp(2.2rem, 6vw, 3rem);
   color: var(--lima);
