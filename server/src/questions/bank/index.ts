@@ -13,9 +13,10 @@ import { batch004 } from "./batch-004.js";
 import { batch005 } from "./batch-005.js";
 import { batch006 } from "./batch-006.js";
 import { batch007 } from "./batch-007.js";
+import { batch008 } from "./batch-008.js";
 import type { BankQuestion } from "./batch-001.js";
 
-const batches: BankQuestion[][] = [batch001, batch002, batch003, batch004, batch005, batch006, batch007];
+const batches: BankQuestion[][] = [batch001, batch002, batch003, batch004, batch005, batch006, batch007, batch008];
 
 // Slugs that were loaded in an earlier version of a batch and later
 // replaced (insertBankQuestion never updates an existing row, so a fixed
