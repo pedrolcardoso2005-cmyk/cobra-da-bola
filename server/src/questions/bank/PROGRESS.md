@@ -15,8 +15,9 @@
 | 007 | `batch-007.ts` | 100 | 19 | 19 | 19 | 19 | 24 | Concluido, testado (escrito a mao; dificil/impossivel conferidos na web) |
 | 008 | `batch-008.ts` | 100 | 19 | 19 | 19 | 19 | 24 | Concluido, testado (escrito a mao; dificil/impossivel conferidos na web) |
 | 009 | `batch-009.ts` | 100 | 19 | 19 | 19 | 19 | 24 | Concluido, testado (escrito a mao; dificil/impossivel conferidos na web) |
+| 010 | `batch-010.ts` | 100 | 16 | 16 | 16 | 16 | 36 | Concluido, testado (escrito a mao; dificil/impossivel conferidos na web) |
 
-**Total concluido: 900 perguntas** (facil 184, moderado 184, medio 184, dificil 184, impossivel 164).
+**Total concluido: 1.000 perguntas** (facil 200, moderado 200, medio 200, dificil 200, impossivel 200). Meta atingida.
 
 Slugs: `bN-f-NN`, `bN-mo-NN`, `bN-me-NN`, `bN-d-NN`, `bN-i-NN`.
 
@@ -88,8 +89,8 @@ de Neymar no mesmo verao).
    foi duplicado) e, opcionalmente, iniciar o servidor para o loader inserir no
    banco local.
 5. Atualizar a tabela acima.
-6. Quando a soma chegar a 1.000 (200 por dificuldade), rodar a validacao final
-   completa (contagem exata, ids unicos, fontes preenchidas).
+6. A validacao final (1.000 perguntas, 200 por dificuldade, slugs e enunciados
+   unicos) esta no teste "banco de perguntas -- meta final".
 
 ## Metodologia (lote 003)
 
