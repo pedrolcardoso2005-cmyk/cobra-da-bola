@@ -15,6 +15,7 @@ export interface UserRow {
   matches_lost: number;
   win_streak: number;
   best_win_streak: number;
+  is_admin: number;
 }
 
 export function findUserByEmail(email: string): UserRow | undefined {

@@ -19,8 +19,19 @@ import type { AiQuestionsConfig } from "../src/questions/ai/config.js";
 const dbPath = `${os.tmpdir()}/cobra-ai-stock-test-${process.pid}-${Date.now()}.db`;
 process.env.DB_PATH = dbPath;
 
-const { checkAndTopUp, formatTopUpLog, getStockReport } = await import("../src/questions/ai/stock.js");
-const { insertQuestion, insertAiGenerationLog } = await import("../src/db/questions.js");
+const {
+  checkAndTopUp,
+  formatTopUpLog,
+  getStockReport,
+  rankBucketsByPriority,
+  minStockFor,
+  targetStockFor,
+  acquireGenerationLock,
+  releaseGenerationLock,
+} = await import("../src/questions/ai/stock.js");
+const { insertQuestion, insertAiGenerationLog, insertQuestionConsumption, countConsumptionSince, recentFailureStreak } = await import(
+  "../src/db/questions.js"
+);
 const { db } = await import("../src/db/db.js");
 
 after(() => {
@@ -87,7 +98,7 @@ after(() => {
 // would leak into every test that runs after it in the same file, since
 // they all share one isolated DB file for the whole module.
 beforeEach(() => {
-  db.exec("DELETE FROM ai_generation_log; DELETE FROM questions;");
+  db.exec("DELETE FROM ai_generation_log; DELETE FROM questions; DELETE FROM question_consumption_log;");
 });
 
 function baseConfig(overrides: Partial<AiQuestionsConfig> = {}): AiQuestionsConfig {
@@ -99,6 +110,11 @@ function baseConfig(overrides: Partial<AiQuestionsConfig> = {}): AiQuestionsConf
     embeddingModel: "test-embedding-model",
     minStockPerBucket: 15,
     targetStockPerBucket: 40,
+    minStockPerDifficulty: {},
+    targetStockPerDifficulty: {},
+    circuitBreakerThreshold: 0,
+    demandWindowHours: 24,
+    demandWeight: 0,
     batchSize: 20,
     maxBatchesPerDay: 12,
     maxBucketsPerRun: 4,
@@ -137,6 +153,8 @@ describe("checkAndTopUp -- todo motivo de pular fica registrado, nunca silencios
         error: null,
         startedAt: Date.now(),
         finishedAt: Date.now(),
+        inputTokens: null,
+        outputTokens: null,
       });
     }
     const summary = await checkAndTopUp(baseConfig({ maxBatchesPerDay: 12 }));
@@ -182,7 +200,7 @@ describe("checkAndTopUp -- processa buckets deficitarios de verdade quando nada 
 
 describe("formatTopUpLog -- nunca silencioso, nunca vaza segredo", () => {
   it("formata um pulo com o motivo explicito", () => {
-    const lines = formatTopUpLog("boot", { skipped: true, reason: "ANTHROPIC_API_KEY ausente", batches: [] });
+    const lines = formatTopUpLog("boot", { skipped: true, reason: "ANTHROPIC_API_KEY ausente", batches: [], circuitBroken: [] });
     assert.equal(lines.length, 1);
     assert.match(lines[0], /pulado -- ANTHROPIC_API_KEY ausente/);
   });
@@ -190,6 +208,7 @@ describe("formatTopUpLog -- nunca silencioso, nunca vaza segredo", () => {
   it("formata um lote processado com todos os contadores, sem nunca incluir a api key", () => {
     const lines = formatTopUpLog("intervalo de 6h", {
       skipped: false,
+      circuitBroken: [],
       batches: [
         {
           category: "clubes",
@@ -222,6 +241,7 @@ describe("formatTopUpLog -- nunca silencioso, nunca vaza segredo", () => {
   it("inclui o erro da Anthropic quando o lote falhou", () => {
     const lines = formatTopUpLog("boot", {
       skipped: false,
+      circuitBroken: [],
       batches: [
         {
           category: "selecoes",
@@ -241,5 +261,170 @@ describe("formatTopUpLog -- nunca silencioso, nunca vaza segredo", () => {
       ],
     });
     assert.match(lines[0], /ERRO="HTTP 500 da Anthropic"/);
+  });
+});
+
+describe("rankBucketsByPriority -- prioriza por deficit E por demanda real, nao so por deficit", () => {
+  const demandConfig = { minStockPerBucket: 15, minStockPerDifficulty: {}, demandWeight: 2, demandWindowHours: 24 };
+
+  it("sem consumo registrado, ordena so por deficit (demandWeight=0 cai nesse caso tambem)", () => {
+    const buckets = [
+      { category: "clubes" as const, difficulty: "facil" as const, count: 10 }, // deficit 5
+      { category: "jogadores" as const, difficulty: "facil" as const, count: 0 }, // deficit 15
+    ];
+    const ranked = rankBucketsByPriority(buckets, new Map(), { ...demandConfig, demandWeight: 0 });
+    assert.equal(ranked[0].category, "jogadores");
+    assert.equal(ranked[1].category, "clubes");
+  });
+
+  it("um bucket com deficit menor mas consumo recente alto pode furar a fila de um com deficit maior e sem consumo", () => {
+    const buckets = [
+      { category: "clubes" as const, difficulty: "facil" as const, count: 10 }, // deficit 5
+      { category: "jogadores" as const, difficulty: "facil" as const, count: 0 }, // deficit 15, nunca consumido
+    ];
+    // Deficit puro colocaria jogadores primeiro (15 > 5). Com consumo
+    // intenso em clubes (240 em 24h = 10/h, peso 2 -> +20), a prioridade
+    // de clubes (5 + 20 = 25) passa a de jogadores (15 + 0 = 15).
+    const veryHighDemand = new Map([["clubes::facil", 240]]);
+    const ranked = rankBucketsByPriority(buckets, veryHighDemand, demandConfig);
+    assert.equal(ranked[0].category, "clubes", "consumo intenso deveria superar o deficit puro de jogadores");
+  });
+
+  it("buckets com estoque no minimo ou acima nunca entram na lista (deficit <= 0)", () => {
+    const buckets = [{ category: "clubes" as const, difficulty: "facil" as const, count: 15 }];
+    const ranked = rankBucketsByPriority(buckets, new Map(), demandConfig);
+    assert.equal(ranked.length, 0);
+  });
+
+  it("minStockPerDifficulty sobrescreve o minStockPerBucket global quando presente", () => {
+    const buckets = [{ category: "clubes" as const, difficulty: "impossivel" as const, count: 5 }];
+    const config = { ...demandConfig, minStockPerDifficulty: { impossivel: 3 } };
+    // minimo especifico (3) e menor que o estoque (5) -> sem deficit, mesmo
+    // que o minimo global (15) diria o contrario.
+    const ranked = rankBucketsByPriority(buckets, new Map(), config);
+    assert.equal(ranked.length, 0);
+  });
+});
+
+describe("minStockFor/targetStockFor -- override por dificuldade com fallback para o valor global", () => {
+  it("usa o override quando existe", () => {
+    const config = { minStockPerBucket: 15, targetStockPerBucket: 40, minStockPerDifficulty: { impossivel: 7 }, targetStockPerDifficulty: { impossivel: 20 } } as AiQuestionsConfig;
+    assert.equal(minStockFor(config, "impossivel"), 7);
+    assert.equal(targetStockFor(config, "impossivel"), 20);
+  });
+
+  it("cai para o valor global quando nao ha override para essa dificuldade", () => {
+    const config = { minStockPerBucket: 15, targetStockPerBucket: 40, minStockPerDifficulty: {}, targetStockPerDifficulty: {} } as AiQuestionsConfig;
+    assert.equal(minStockFor(config, "facil"), 15);
+    assert.equal(targetStockFor(config, "facil"), 40);
+  });
+});
+
+describe("checkAndTopUp -- circuit breaker por bucket (nunca tenta para sempre um bucket quebrado)", () => {
+  it("pula (sem tentar de novo) um bucket com N falhas consecutivas, e registra isso separado dos processados", async () => {
+    for (let i = 0; i < 3; i++) {
+      insertAiGenerationLog({
+        category: "futebol_saudita",
+        difficulty: "impossivel",
+        requested: 20,
+        generated: 0,
+        rejectedValidation: 0,
+        rejectedDuplicate: 0,
+        flaggedForReview: 0,
+        autoApproved: 0,
+        model: "test-model",
+        error: "falha simulada",
+        startedAt: Date.now(),
+        finishedAt: Date.now(),
+        inputTokens: null,
+        outputTokens: null,
+      });
+    }
+    assert.equal(recentFailureStreak("futebol_saudita", "impossivel", 3), true);
+
+    const summary = await checkAndTopUp(
+      baseConfig({ minStockPerBucket: 1, targetStockPerBucket: 1, maxBucketsPerRun: 70, maxBatchesPerDay: 70, circuitBreakerThreshold: 3 }),
+    );
+    assert.equal(summary.skipped, false);
+    assert.ok(
+      summary.circuitBroken.some((b) => b.category === "futebol_saudita" && b.difficulty === "impossivel"),
+      "futebol_saudita/impossivel deveria estar na lista de circuit-broken",
+    );
+    assert.ok(
+      !summary.batches.some((b) => b.category === "futebol_saudita" && b.difficulty === "impossivel"),
+      "nao deveria ter tentado gerar de novo para esse bucket",
+    );
+
+    const lines = formatTopUpLog("boot", summary);
+    assert.ok(lines.some((l) => l.includes("circuit breaker aberto") && l.includes("futebol_saudita/impossivel")));
+  });
+
+  it("circuitBreakerThreshold=0 desativa o breaker -- o bucket volta a ser tentado normalmente", async () => {
+    for (let i = 0; i < 5; i++) {
+      insertAiGenerationLog({
+        category: "futebol_saudita",
+        difficulty: "impossivel",
+        requested: 20,
+        generated: 0,
+        rejectedValidation: 0,
+        rejectedDuplicate: 0,
+        flaggedForReview: 0,
+        autoApproved: 0,
+        model: "test-model",
+        error: "falha simulada",
+        startedAt: Date.now(),
+        finishedAt: Date.now(),
+        inputTokens: null,
+        outputTokens: null,
+      });
+    }
+    const summary = await checkAndTopUp(
+      baseConfig({ minStockPerBucket: 1, targetStockPerBucket: 1, maxBucketsPerRun: 70, maxBatchesPerDay: 70, circuitBreakerThreshold: 0 }),
+    );
+    assert.equal(summary.circuitBroken.length, 0);
+  });
+});
+
+describe("checkAndTopUp -- lock de geracao compartilhado (nunca roda duas geracoes ao mesmo tempo)", () => {
+  it("se o lock ja estiver ocupado (ex. por uma chamada manual a /gerar), checkAndTopUp pula e explica o motivo", async () => {
+    assert.equal(acquireGenerationLock(), true, "deveria conseguir o lock na primeira vez");
+    try {
+      const summary = await checkAndTopUp(baseConfig({ minStockPerBucket: 1, targetStockPerBucket: 1, maxBucketsPerRun: 70, maxBatchesPerDay: 70 }));
+      assert.equal(summary.skipped, true);
+      assert.match(summary.reason!, /geracao em andamento/);
+    } finally {
+      releaseGenerationLock();
+    }
+  });
+
+  it("depois de liberado, uma nova chamada consegue o lock normalmente", async () => {
+    assert.equal(acquireGenerationLock(), true);
+    releaseGenerationLock();
+    assert.equal(acquireGenerationLock(), true, "deveria conseguir de novo depois do release");
+    releaseGenerationLock();
+  });
+});
+
+describe("consumo de perguntas -- registra o que foi servido a uma partida, para orientar a reposicao", () => {
+  it("countConsumptionSince conta certo por bucket, e ignora o que esta fora da janela", () => {
+    const now = Date.now();
+    insertQuestionConsumption("clubes", "facil", "q1");
+    insertQuestionConsumption("clubes", "facil", "q2");
+    insertQuestionConsumption("jogadores", "medio", "q3");
+    // Fora da janela: simulado inserindo direto com served_at antigo.
+    db.prepare("INSERT INTO question_consumption_log (id, category, difficulty, question_id, served_at) VALUES (?, ?, ?, ?, ?)").run(
+      "old-1",
+      "clubes",
+      "facil",
+      "q-old",
+      now - 1000 * 60 * 60 * 48,
+    );
+
+    const since = now - 1000 * 60 * 60 * 24;
+    const counts = countConsumptionSince(since);
+    const clubesFacil = counts.find((c) => c.category === "clubes" && c.difficulty === "facil");
+    const jogadoresMedio = counts.find((c) => c.category === "jogadores" && c.difficulty === "medio");
+    assert.equal(clubesFacil?.count, 2, "nao deveria contar o consumo de 48h atras, fora da janela de 24h");
+    assert.equal(jogadoresMedio?.count, 1);
   });
 });

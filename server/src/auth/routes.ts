@@ -102,6 +102,26 @@ export function requireAuth(req: any, res: any, next: any) {
   next();
 }
 
+// Comma-separated allowlist (ADMIN_EMAILS="pedro@example.com,outro@x.com")
+// -- checked at request time, so promoting an account to admin takes
+// effect on that account's very next request, no server restart needed.
+// `users.is_admin` (see db.ts) exists for a future admin UI to grant
+// access without touching env vars, but isn't required for this to work.
+const ADMIN_EMAILS = (process.env.ADMIN_EMAILS ?? "")
+  .split(",")
+  .map((e) => e.trim().toLowerCase())
+  .filter(Boolean);
+
+/** Mount AFTER requireAuth. Rejects any authenticated player who isn't an
+ * admin -- the AI review/generation routes (review-routes.ts) must never
+ * be reachable by a regular player, only by someone listed in
+ * ADMIN_EMAILS or flagged is_admin=1 in the database. */
+export function requireAdmin(req: any, res: any, next: any) {
+  const isAdmin = req.user?.is_admin === 1 || ADMIN_EMAILS.includes(String(req.user?.email ?? "").toLowerCase());
+  if (!isAdmin) return res.status(403).json({ error: "Acesso restrito a administradores" });
+  next();
+}
+
 authRouter.get("/me", requireAuth, (req: any, res) => {
   res.json({ user: publicUser(req.user) });
 });

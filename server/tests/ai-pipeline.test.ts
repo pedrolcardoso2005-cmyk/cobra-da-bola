@@ -40,6 +40,11 @@ function baseConfig(overrides: Partial<AiQuestionsConfig> = {}): AiQuestionsConf
     embeddingModel: "test-embedding-model",
     minStockPerBucket: 15,
     targetStockPerBucket: 40,
+    minStockPerDifficulty: {},
+    targetStockPerDifficulty: {},
+    circuitBreakerThreshold: 0,
+    demandWindowHours: 24,
+    demandWeight: 0,
     batchSize: 20,
     maxBatchesPerDay: 6,
     autoApprove: false,
@@ -219,5 +224,47 @@ describe("runGenerationBatch", () => {
     assert.equal(result.error, null);
     assert.equal(result.insertedIds.length, 1);
     assert.equal(result.flaggedForReview, 1);
+  });
+
+  it("grava o motivo real da pendencia na propria pergunta -- fonte inacessivel vs. auto-approve desligado", async () => {
+    anthropicResponder = () => ({
+      ok: true,
+      candidates: [
+        candidate({ category: "concacaf", prompt: "Pergunta pendente por fonte que nao resolve de verdade.", sourceUrl: "https://example.com/unreachable" }),
+      ],
+    });
+
+    const result = await runGenerationBatch(baseConfig({ autoApprove: true }), "concacaf", "facil", 1);
+    assert.equal(result.flaggedForReview, 1);
+
+    const row = db.prepare("SELECT review_reason FROM questions WHERE id = ?").get(result.insertedIds[0]) as { review_reason: string };
+    assert.match(row.review_reason, /fonte_inacessivel/);
+
+    // Mesma fonte, mas com AUTO_APPROVE desligado -- o motivo tem que
+    // deixar claro que nao foi a qualidade da pergunta, foi a politica.
+    anthropicResponder = () => ({
+      ok: true,
+      candidates: [candidate({ category: "concacaf", prompt: "Outra pergunta nova, com fonte alcancavel desta vez." })],
+    });
+    const result2 = await runGenerationBatch(baseConfig({ autoApprove: false }), "concacaf", "facil", 1);
+    const row2 = db.prepare("SELECT review_reason FROM questions WHERE id = ?").get(result2.insertedIds[0]) as { review_reason: string };
+    assert.match(row2.review_reason, /auto_approve_desligado/);
+  });
+
+  it("grava o consumo de tokens no log de geracao, para monitoramento de custo (nao fica so em memoria)", async () => {
+    anthropicResponder = () => ({
+      ok: true,
+      candidates: [candidate({ category: "historia_do_futebol", prompt: "Pergunta nova e unica sobre a historia do futebol mundial." })],
+    });
+
+    const startedAt = Date.now();
+    await runGenerationBatch(baseConfig(), "historia_do_futebol", "facil", 1);
+
+    const row = db
+      .prepare("SELECT input_tokens, output_tokens FROM ai_generation_log WHERE category = ? AND started_at >= ? ORDER BY started_at DESC LIMIT 1")
+      .get("historia_do_futebol", startedAt) as { input_tokens: number; output_tokens: number };
+    // O fetch mockado deste arquivo sempre devolve usage: {input_tokens:10, output_tokens:10}.
+    assert.equal(row.input_tokens, 10);
+    assert.equal(row.output_tokens, 10);
   });
 });

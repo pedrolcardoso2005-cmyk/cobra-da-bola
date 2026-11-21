@@ -17,6 +17,8 @@ import { seedDatabase } from "./questions/seed.js";
 import { loadQuestionBank } from "./questions/bank/index.js";
 import { loadAiQuestionsConfig } from "./questions/ai/config.js";
 import { checkAndTopUp, logTopUpSummary } from "./questions/ai/stock.js";
+import { DB_PATH } from "./db/db.js";
+import { countAiGeneratedQuestions } from "./db/questions.js";
 
 seedDatabase();
 const bankResult = loadQuestionBank();
@@ -24,6 +26,15 @@ if (bankResult.inserted > 0) {
   // eslint-disable-next-line no-console
   console.log(`Banco de perguntas: ${bankResult.inserted} novas, ${bankResult.skipped} ja existiam (total no banco ate agora: ${bankResult.total}).`);
 }
+
+// Persistence diagnostic (see auditoria de persistencia): logs the exact
+// resolved DB file path and how many AI-generated questions already exist
+// in it, every boot. If this number unexpectedly drops to (or stays at) 0
+// right after a deploy that should have had AI-generated stock, the
+// Railway logs say so immediately -- no need to compare /estoque by hand
+// across deploys to notice the database reset.
+// eslint-disable-next-line no-console
+console.log(`[persistencia] DB_PATH=${DB_PATH} perguntas_geradas_por_ia_no_banco=${countAiGeneratedQuestions()}`);
 
 // Background stock top-up for the AI-generated question pipeline (see
 // server/src/questions/ai/). Fire-and-forget on purpose: checkAndTopUp()

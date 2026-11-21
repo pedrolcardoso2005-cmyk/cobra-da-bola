@@ -20,6 +20,7 @@ interface QuestionRow {
   season_ref: string | null;
   status: QuestionStatus;
   generated_by: string | null;
+  review_reason: string | null;
 }
 
 /** Admin/review-facing view of a question row: the public Question shape
@@ -28,10 +29,17 @@ export interface QuestionWithStatus extends Question {
   status: QuestionStatus;
   generatedBy: string | null;
   createdAt: number;
+  reviewReason: string | null;
 }
 
 function rowToQuestionWithStatus(r: QuestionRow): QuestionWithStatus {
-  return { ...rowToQuestion(r), status: r.status, generatedBy: r.generated_by ?? null, createdAt: r.created_at };
+  return {
+    ...rowToQuestion(r),
+    status: r.status,
+    generatedBy: r.generated_by ?? null,
+    createdAt: r.created_at,
+    reviewReason: r.review_reason ?? null,
+  };
 }
 
 function rowToQuestion(r: QuestionRow): Question {
@@ -131,12 +139,15 @@ export function listPendingQuestions(): QuestionWithStatus[] {
 }
 
 /** Inserts an AI-generated question as "pending_review": never visible to
- * pickRandomQuestion/the game until an admin approves it. */
-export function insertPendingQuestion(q: Omit<Question, "id">, generatedBy: string): QuestionWithStatus {
+ * pickRandomQuestion/the game until an admin approves it. `reviewReason`
+ * records why (e.g. "fonte_inacessivel", "dedupe_semantica:score=0.91")
+ * so the admin report can explain every pendency instead of just counting
+ * them -- see pipeline.ts, the only caller that decides this reason. */
+export function insertPendingQuestion(q: Omit<Question, "id">, generatedBy: string, reviewReason: string): QuestionWithStatus {
   const id = nanoid();
   db.prepare(
-    `INSERT INTO questions (id, category, difficulty, format, prompt, choices_json, correct_answer, accepted_answers_json, created_by_user_id, created_at, explanation, source_url, season_ref, status, generated_by)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, NULL, ?, ?, ?, ?, 'pending_review', ?)`,
+    `INSERT INTO questions (id, category, difficulty, format, prompt, choices_json, correct_answer, accepted_answers_json, created_by_user_id, created_at, explanation, source_url, season_ref, status, generated_by, review_reason)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, NULL, ?, ?, ?, ?, 'pending_review', ?, ?)`,
   ).run(
     id,
     q.category,
@@ -151,6 +162,7 @@ export function insertPendingQuestion(q: Omit<Question, "id">, generatedBy: stri
     q.sourceUrl ?? null,
     q.seasonRef ?? null,
     generatedBy,
+    reviewReason,
   );
   return rowToQuestionWithStatus(db.prepare("SELECT * FROM questions WHERE id = ?").get(id) as unknown as QuestionRow);
 }
@@ -194,6 +206,18 @@ export function rejectQuestion(id: string): void {
 
 /** Counts of usable ("approved") questions per category x difficulty, for
  * the stock watcher to decide what needs topping up. */
+/** Total rows ever produced by the AI pipeline (approved + pending +
+ * rejected, any status) still in the database -- the single number that
+ * answers "did AI-generated content survive the last restart/deploy?"
+ * without needing to compare boot-to-boot by hand. Logged once at boot
+ * (see index.ts) specifically so a silent SQLite reset (no persistent
+ * volume -- see the persistence audit) shows up immediately in the
+ * Railway logs instead of only being noticed later via /estoque. */
+export function countAiGeneratedQuestions(): number {
+  const row = db.prepare("SELECT COUNT(*) as n FROM questions WHERE generated_by IS NOT NULL").get() as { n: number };
+  return row.n;
+}
+
 export function countApprovedByBucket(): { category: QuestionCategory; difficulty: Difficulty; count: number }[] {
   return db
     .prepare("SELECT category, difficulty, COUNT(*) as count FROM questions WHERE status = 'approved' GROUP BY category, difficulty")
@@ -256,12 +280,17 @@ export interface AiGenerationLogEntry {
   error: string | null;
   startedAt: number;
   finishedAt: number;
+  /** Token usage for the batch's Anthropic call(s), for cost monitoring.
+   * null when the call never happened (e.g. missing API key) or the API
+   * response carried no usage block. */
+  inputTokens: number | null;
+  outputTokens: number | null;
 }
 
 export function insertAiGenerationLog(entry: AiGenerationLogEntry): void {
   db.prepare(
-    `INSERT INTO ai_generation_log (id, category, difficulty, requested, generated, rejected_validation, rejected_duplicate, flagged_for_review, auto_approved, model, error, started_at, finished_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    `INSERT INTO ai_generation_log (id, category, difficulty, requested, generated, rejected_validation, rejected_duplicate, flagged_for_review, auto_approved, model, error, started_at, finished_at, input_tokens, output_tokens)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
   ).run(
     nanoid(),
     entry.category,
@@ -276,7 +305,91 @@ export function insertAiGenerationLog(entry: AiGenerationLogEntry): void {
     entry.error,
     entry.startedAt,
     entry.finishedAt,
+    entry.inputTokens,
+    entry.outputTokens,
   );
+}
+
+interface AiGenerationLogRow {
+  id: string;
+  category: QuestionCategory;
+  difficulty: Difficulty;
+  requested: number;
+  generated: number;
+  rejected_validation: number;
+  rejected_duplicate: number;
+  flagged_for_review: number;
+  auto_approved: number;
+  model: string;
+  error: string | null;
+  started_at: number;
+  finished_at: number;
+  input_tokens: number | null;
+  output_tokens: number | null;
+}
+
+/** Most recent generation batches, newest first -- the raw feed for the
+ * admin report's "historico de geracao" and token/cost monitoring. */
+export function listRecentGenerationLog(limit = 50): (AiGenerationLogEntry & { id: string })[] {
+  const rows = db
+    .prepare("SELECT * FROM ai_generation_log ORDER BY started_at DESC LIMIT ?")
+    .all(limit) as unknown as AiGenerationLogRow[];
+  return rows.map((r) => ({
+    id: r.id,
+    category: r.category,
+    difficulty: r.difficulty,
+    requested: r.requested,
+    generated: r.generated,
+    rejectedValidation: r.rejected_validation,
+    rejectedDuplicate: r.rejected_duplicate,
+    flaggedForReview: r.flagged_for_review,
+    autoApproved: r.auto_approved,
+    model: r.model,
+    error: r.error,
+    startedAt: r.started_at,
+    finishedAt: r.finished_at,
+    inputTokens: r.input_tokens,
+    outputTokens: r.output_tokens,
+  }));
+}
+
+/** True when the last `threshold` attempts at this exact bucket all failed
+ * (non-null error), most recent first. Used as a per-bucket circuit
+ * breaker (see stock.ts): a bucket repeatedly failing for a structural
+ * reason (bad prompt calibration, a provider outage) should stop eating
+ * the daily batch budget every single run until someone looks at it,
+ * instead of retrying it forever. `threshold <= 0` always returns false
+ * (breaker disabled). */
+export function recentFailureStreak(category: QuestionCategory, difficulty: Difficulty, threshold: number): boolean {
+  if (threshold <= 0) return false;
+  const rows = db
+    .prepare(
+      "SELECT error FROM ai_generation_log WHERE category = ? AND difficulty = ? ORDER BY started_at DESC LIMIT ?",
+    )
+    .all(category, difficulty, threshold) as unknown as { error: string | null }[];
+  return rows.length === threshold && rows.every((r) => r.error !== null);
+}
+
+/** Records that an approved question was actually served to a match (the
+ * demand side of stock-watching -- see stock.ts). Fire-and-forget from the
+ * caller's perspective: never called for career questions, which have
+ * their own separate pool and aren't produced by the AI pipeline. */
+export function insertQuestionConsumption(category: QuestionCategory, difficulty: Difficulty, questionId: string): void {
+  db.prepare(
+    "INSERT INTO question_consumption_log (id, category, difficulty, question_id, served_at) VALUES (?, ?, ?, ?, ?)",
+  ).run(nanoid(), category, difficulty, questionId, Date.now());
+}
+
+/** How many questions each bucket has had served since `sinceTs` -- the
+ * consumption-velocity signal stock.ts uses to prioritize replenishment by
+ * actual demand, not just by raw deficit (see "prioridade de reposicao"
+ * in stock.ts). */
+export function countConsumptionSince(sinceTs: number): { category: QuestionCategory; difficulty: Difficulty; count: number }[] {
+  return db
+    .prepare(
+      "SELECT category, difficulty, COUNT(*) as count FROM question_consumption_log WHERE served_at >= ? GROUP BY category, difficulty",
+    )
+    .all(sinceTs) as unknown as { category: QuestionCategory; difficulty: Difficulty; count: number }[];
 }
 
 export function pickRandomQuestion(opts: {

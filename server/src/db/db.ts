@@ -4,7 +4,11 @@ import { dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const DB_PATH = process.env.DB_PATH ?? `${__dirname}/../../data/cobra.db`;
+// Exported (not just used locally) so index.ts can log the exact resolved
+// path at boot -- the first thing to check when diagnosing whether this
+// file lives on a persistent Railway volume or on the container's
+// ephemeral disk (see ENV_SETUP.md's "persistencia" section).
+export const DB_PATH = process.env.DB_PATH ?? `${__dirname}/../../data/cobra.db`;
 mkdirSync(dirname(DB_PATH), { recursive: true });
 
 export const db = new DatabaseSync(DB_PATH);
@@ -81,6 +85,15 @@ CREATE TABLE IF NOT EXISTS career_questions (
 );
 `);
 
+// Additive migration: admin flag, defaulting everyone to non-admin. See
+// auth/routes.ts requireAdmin -- actual admin access today is granted by
+// listing an email in the ADMIN_EMAILS env var (checked at request time,
+// no restart or DB write needed), not by this column; it exists so a
+// future admin UI has somewhere real to persist a promotion instead of
+// only ever living in an env var.
+const userCols = (db.prepare("PRAGMA table_info(users)").all() as unknown as { name: string }[]).map((c) => c.name);
+if (!userCols.includes("is_admin")) db.exec("ALTER TABLE users ADD COLUMN is_admin INTEGER NOT NULL DEFAULT 0");
+
 // Additive migration: adds columns the question bank needs (explanation,
 // source, season reference) without touching existing rows/tables.
 const questionCols = (db.prepare("PRAGMA table_info(questions)").all() as unknown as { name: string }[]).map((c) => c.name);
@@ -93,6 +106,12 @@ for (const [col, ddl] of [
   // 'rejected': kept for audit/dedupe history, never served to the game.
   ["status", "ALTER TABLE questions ADD COLUMN status TEXT NOT NULL DEFAULT 'approved'"],
   ["generated_by", "ALTER TABLE questions ADD COLUMN generated_by TEXT"],
+  // Why a pending_review row isn't auto-approved -- e.g. "fonte_inacessivel"
+  // or "dedupe_semantica:score=0.91". NULL for approved/rejected/bank rows.
+  // Lets an admin (or this app's own report) see the reason without
+  // re-deriving it after the fact, which isn't always possible (a source
+  // that was down at generation time may be back up later).
+  ["review_reason", "ALTER TABLE questions ADD COLUMN review_reason TEXT"],
 ] as const) {
   if (!questionCols.includes(col)) db.exec(ddl);
 }
@@ -138,7 +157,32 @@ CREATE TABLE IF NOT EXISTS ai_generation_log (
   started_at INTEGER NOT NULL,
   finished_at INTEGER NOT NULL
 );
+
+-- One row per question actually served to a match (phase1/bracket "aberta"
+-- questions only -- career questions have their own, separate pool and the
+-- AI pipeline never generates those). This is the demand side of the
+-- stock watcher: without it, stock.ts can only ever see supply (how many
+-- approved rows exist), never how fast each bucket is being drained.
+CREATE TABLE IF NOT EXISTS question_consumption_log (
+  id TEXT PRIMARY KEY,
+  category TEXT NOT NULL,
+  difficulty TEXT NOT NULL,
+  question_id TEXT NOT NULL,
+  served_at INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_consumption_log_bucket_time ON question_consumption_log(category, difficulty, served_at);
 `);
+
+// Additive migration: token usage per generation batch, for cost
+// monitoring (previously computed in-memory and discarded -- see
+// pipeline.ts logResult). NULL for rows logged before this column existed.
+const genLogCols = (db.prepare("PRAGMA table_info(ai_generation_log)").all() as unknown as { name: string }[]).map((c) => c.name);
+for (const [col, ddl] of [
+  ["input_tokens", "ALTER TABLE ai_generation_log ADD COLUMN input_tokens INTEGER"],
+  ["output_tokens", "ALTER TABLE ai_generation_log ADD COLUMN output_tokens INTEGER"],
+] as const) {
+  if (!genLogCols.includes(col)) db.exec(ddl);
+}
 
 // Meu Historico (Modo Solo): one row per graded/skipped answer, server-side
 // only (every row is written from an authenticated request already judged

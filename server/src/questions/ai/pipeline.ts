@@ -12,6 +12,7 @@ import { createEmbeddings } from "./embeddingsClient.js";
 import { generateQuestionBatch } from "./generate.js";
 import { isSourceReachable, toQuestionInput, validateCandidateShape } from "./validate.js";
 import type { StoredEmbedding } from "../../db/questions.js";
+import type { DedupeVerdict } from "./types.js";
 
 export interface RunBatchResult {
   insertedIds: string[];
@@ -148,7 +149,7 @@ export async function runGenerationBatch(
     const input = toQuestionInput(candidate);
     let row: QuestionWithStatus;
     if (!config.autoApprove || needsReview) {
-      row = insertPendingQuestion(input, config.anthropicModel);
+      row = insertPendingQuestion(input, config.anthropicModel, pendingReason(config.autoApprove, verdict, sourceOk));
       flaggedForReview++;
     } else {
       row = insertApprovedAiQuestion(input, config.anthropicModel);
@@ -208,6 +209,22 @@ function logResult(
     error: result.error,
     startedAt,
     finishedAt: Date.now(),
+    inputTokens: result.usage?.inputTokens ?? null,
+    outputTokens: result.usage?.outputTokens ?? null,
   });
+}
+
+/** Builds the human-readable reason a candidate was routed to
+ * pending_review instead of auto-approved, for the admin report (see
+ * server/src/db/questions.ts review_reason). Never silent: every pending
+ * row gets exactly one of these, even the "just because AUTO_APPROVE is
+ * off" case, which isn't a quality problem but still needs an answer when
+ * someone asks "por que isso ficou pendente?". */
+function pendingReason(autoApprove: boolean, verdict: DedupeVerdict, sourceOk: boolean): string {
+  const reasons: string[] = [];
+  if (verdict.verdict === "needs_review") reasons.push(`dedupe_semantica:score=${verdict.score.toFixed(2)}`);
+  if (!sourceOk) reasons.push("fonte_inacessivel");
+  if (reasons.length === 0) reasons.push(autoApprove ? "motivo_desconhecido" : "auto_approve_desligado");
+  return reasons.join("; ");
 }
 

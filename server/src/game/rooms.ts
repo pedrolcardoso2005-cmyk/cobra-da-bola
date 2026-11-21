@@ -4,7 +4,7 @@ import { generateRoomCode, type CareerQuestion, type MatchSettings, type MatchSt
 import { applyAction, EngineError } from "./engine.js";
 import { createInitialMatch } from "./match.js";
 import type { EngineAction } from "./actions.js";
-import { pickRandomCareerQuestion, pickRandomQuestion } from "../db/questions.js";
+import { insertQuestionConsumption, pickRandomCareerQuestion, pickRandomQuestion } from "../db/questions.js";
 import { persistFinishedMatch } from "../db/matches.js";
 
 export class RoomRuntime {
@@ -163,6 +163,7 @@ class RoomManager extends EventEmitter {
         excludeIds: match.phase1!.usedQuestionIds,
       });
       if (!q) throw new EngineError("Nao ha mais perguntas disponiveis com esses filtros");
+      insertQuestionConsumption(q.category, q.difficulty, q.id);
       room.questionCache.set(q.id, q);
       this.dispatch(room, { type: "RELEASE_PHASE1_QUESTION", question: q, now: Date.now() });
     } else if (match.phase === "semifinal" || match.phase === "final") {
@@ -172,6 +173,7 @@ class RoomManager extends EventEmitter {
         excludeIds: match.bracketRound?.usedQuestionIds ?? [],
       });
       if (!q) throw new EngineError("Nao ha mais perguntas disponiveis com esses filtros");
+      insertQuestionConsumption(q.category, q.difficulty, q.id);
       room.questionCache.set(q.id, q);
       this.dispatch(room, { type: "RELEASE_BRACKET_QUESTION", question: q, now: Date.now() });
     } else if (match.phase === "career") {
