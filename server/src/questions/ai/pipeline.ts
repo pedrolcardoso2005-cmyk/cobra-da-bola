@@ -22,6 +22,10 @@ export interface RunBatchResult {
   flaggedForReview: number;
   autoApproved: number;
   error: string | null;
+  /** Token usage for the single Anthropic generation call in this batch
+   * (not the embeddings call), for rough cost estimation -- null if the
+   * call never happened or didn't return usage. */
+  usage: { inputTokens: number; outputTokens: number } | null;
 }
 
 /**
@@ -49,6 +53,7 @@ export async function runGenerationBatch(
     flaggedForReview: 0,
     autoApproved: 0,
     error: null,
+    usage: null,
   };
 
   if (!config.anthropicApiKey) {
@@ -58,6 +63,7 @@ export async function runGenerationBatch(
   }
 
   let candidates: Awaited<ReturnType<typeof generateQuestionBatch>>["candidates"] = [];
+  let usage: RunBatchResult["usage"] = null;
   try {
     const textPoolForPrompt = loadTextPool()
       .filter((p) => p.category === category)
@@ -73,6 +79,7 @@ export async function runGenerationBatch(
       useWebSearch: true,
     });
     candidates = generation.candidates;
+    usage = generation.usage;
   } catch (err) {
     const result = { ...base, error: err instanceof Error ? err.message : String(err) };
     logResult(config, category, difficulty, result, startedAt);
@@ -173,6 +180,7 @@ export async function runGenerationBatch(
     flaggedForReview,
     autoApproved,
     error: null,
+    usage,
   };
   logResult(config, category, difficulty, result, startedAt);
   return result;

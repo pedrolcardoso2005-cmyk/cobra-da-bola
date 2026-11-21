@@ -323,7 +323,7 @@ export default function SoloView() {
                 )}
                 {!result && (
                   <button type="button" className="btn btn-ghost" onClick={() => void skipQuestion()}>
-                    Pular (revelar resposta)
+                    Pular pergunta
                   </button>
                 )}
                 {result && (
@@ -371,7 +371,7 @@ export default function SoloView() {
                       Revelar proximo clube
                     </button>
                     <button type="button" className="btn btn-ghost" onClick={() => void skipCareer()}>
-                      Pular (revelar resposta)
+                      Pular carreira
                     </button>
                   </div>
                 )}

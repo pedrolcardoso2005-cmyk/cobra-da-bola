@@ -29,7 +29,27 @@ const TOOL_INPUT_SCHEMA = {
   },
 } as const;
 
+// Cada nivel precisa de uma descricao concreta e distinta -- sem isso, o
+// modelo recebia so a palavra solta ("impossivel", "dificil", ...) e nao
+// tinha como calibrar o quao mais dificil uma deveria ser da outra,
+// resultando em perguntas "impossivel" que eram, na pratica, perguntas
+// "dificil" com outro rotulo.
+export const DIFFICULTY_GUIDANCE: Record<Difficulty, string> = {
+  facil: "Fato amplamente conhecido por qualquer torcedor casual (campeoes mundiais recentes, clubes grandes, jogadores muito famosos). Qualquer pessoa que assista futebol de vez em quando deveria acertar.",
+  moderado: "Conhecido por quem acompanha futebol com regularidade, mas nao precisa ser fanatico -- resultados e nomes relevantes que aparecem no noticiario esportivo comum.",
+  medio: "Exige conhecimento de um torcedor dedicado: edicoes especificas de competicoes, jogadores menos midiaticos, estatisticas que nao sao do dia a dia do noticiario.",
+  dificil: "Conhecimento de fa hardcore ou de quem estuda futebol a serio: recordes especificos, jogadores ou times de nicho, fatos de decadas passadas que exigem pesquisa para confirmar.",
+  impossivel: "Nivel de especialista/jornalista esportivo. Estatisticas extremamente obscuras, jogadores secundarios de elencos antigos, numeros exatos (datas, placares, minutos) que quase ninguem saberia de cabeca, competicoes ou eras pouco cobertas pela midia. Tem que ser genuinamente dificil ate para quem manja muito de futebol -- NUNCA uma pergunta 'dificil' reformulada com outro rotulo.",
+};
+
 const SYSTEM_PROMPT = `Voce gera perguntas de quiz de futebol em portugues do Brasil para o jogo "Cobra da Bola".
+
+Escala de dificuldade (cada nivel precisa ser nitidamente mais dificil que o anterior -- nunca gere uma pergunta de um nivel que poderia facilmente pertencer ao nivel vizinho):
+- facil: ${DIFFICULTY_GUIDANCE.facil}
+- moderado: ${DIFFICULTY_GUIDANCE.moderado}
+- medio: ${DIFFICULTY_GUIDANCE.medio}
+- dificil: ${DIFFICULTY_GUIDANCE.dificil}
+- impossivel: ${DIFFICULTY_GUIDANCE.impossivel}
 
 Regras obrigatorias:
 - NUNCA invente ou arredonde fatos. Use a ferramenta de busca na web para confirmar cada fato antes de incluir a pergunta.
@@ -54,6 +74,7 @@ export interface GenerateBatchParams {
 export interface GenerateBatchResult {
   candidates: GeneratedQuestionCandidate[];
   stopReason: string | null;
+  usage: { inputTokens: number; outputTokens: number } | null;
 }
 
 export async function generateQuestionBatch(params: GenerateBatchParams): Promise<GenerateBatchResult> {
@@ -63,6 +84,8 @@ export async function generateQuestionBatch(params: GenerateBatchParams): Promis
       : "(nenhuma ainda para esta categoria)";
 
   const userMessage = `Gere ${params.count} perguntas novas, categoria "${params.category}", dificuldade "${params.difficulty}".
+
+O que "${params.difficulty}" significa aqui, especificamente (siga esta calibracao, nao a palavra isolada): ${DIFFICULTY_GUIDANCE[params.difficulty]}
 
 Perguntas que JA existem nesta categoria (nao repita o mesmo fato, nem reformulado):
 ${existingList}
@@ -81,10 +104,10 @@ Responda chamando a ferramenta "${TOOL_NAME}" com exatamente ${params.count} per
   });
 
   if (!result.toolInput || typeof result.toolInput !== "object") {
-    return { candidates: [], stopReason: result.stopReason };
+    return { candidates: [], stopReason: result.stopReason, usage: result.usage };
   }
   const questions = (result.toolInput as { questions?: unknown }).questions;
-  if (!Array.isArray(questions)) return { candidates: [], stopReason: result.stopReason };
+  if (!Array.isArray(questions)) return { candidates: [], stopReason: result.stopReason, usage: result.usage };
 
-  return { candidates: questions as GeneratedQuestionCandidate[], stopReason: result.stopReason };
+  return { candidates: questions as GeneratedQuestionCandidate[], stopReason: result.stopReason, usage: result.usage };
 }

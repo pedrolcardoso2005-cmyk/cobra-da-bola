@@ -34,20 +34,34 @@ export default function PlayerView() {
   const frozenWordCount = buzz?.frozenWordCount ?? null;
   const questionOpenedAt = buzz?.questionOpenedAt ?? null;
 
+  // "Parar revelacao": a purely local, personal pause -- stops THIS
+  // player's own screen from advancing further, without buzzing (so it
+  // never claims the right to answer) and without touching server state
+  // at all. The authoritative server freeze (frozenWordCount, set the
+  // instant someone actually buzzes) always takes priority over a local
+  // pause, since that's the real end-of-round state everyone must agree on.
+  const [locallyPaused, setLocallyPaused] = useState(false);
+  const pausedAtCountRef = useRef<number | null>(null);
+  useEffect(() => {
+    setLocallyPaused(false);
+    pausedAtCountRef.current = null;
+  }, [playerView?.currentQuestion?.id]);
+
   // Forces a re-render every tick while the reveal is still live, purely
   // to recompute the derived count below from the server anchor -- holds
   // no reveal state of its own (there's nothing local left to reset per
   // question; the displayed count is always recomputed from server data).
   const [, forceTick] = useState(0);
   useEffect(() => {
-    if (!questionOpenedAt || frozenWordCount != null) return;
+    if (!questionOpenedAt || frozenWordCount != null || locallyPaused) return;
     const id = setInterval(() => forceTick((n) => n + 1), REVEAL_WORD_MS);
     return () => clearInterval(id);
-  }, [questionOpenedAt, frozenWordCount]);
+  }, [questionOpenedAt, frozenWordCount, locallyPaused]);
 
   const revealedCount = (() => {
     if (!questionOpenedAt) return 0; // buzzers not armed yet -- nothing to show
     if (frozenWordCount != null) return frozenWordCount;
+    if (locallyPaused && pausedAtCountRef.current != null) return pausedAtCountRef.current;
     const elapsed = Date.now() - questionOpenedAt;
     return Math.max(1, Math.min(Math.floor(elapsed / REVEAL_WORD_MS) + 1, words.length));
   })();
@@ -157,6 +171,21 @@ export default function PlayerView() {
                 A pergunta foi interrompida porque {interruptedBy === self.displayName ? "voce respondeu" : `${interruptedBy ?? "alguem"} respondeu`} antes de ela terminar.
               </p>
             )}
+            {locallyPaused && frozenWordCount == null && (
+              <p className="player-view__note">Revelacao parada so na sua tela -- apertar RESPONDER ou pedir para pular quando quiser.</p>
+            )}
+            {playerView.myButtonState === "armed" && frozenWordCount == null && !locallyPaused && revealedCount < words.length && (
+              <button
+                type="button"
+                className="btn btn-ghost"
+                onClick={() => {
+                  pausedAtCountRef.current = revealedCount;
+                  setLocallyPaused(true);
+                }}
+              >
+                Parar revelacao
+              </button>
+            )}
           </div>
         )}
 
@@ -168,12 +197,12 @@ export default function PlayerView() {
           <div className="player-skip">
             {otherSkipRequesterName ? (
               <button className="btn btn-ghost" onClick={actions.requestSkip}>
-                {otherSkipRequesterName} pediu para pular -- concordar e pular tambem
+                {otherSkipRequesterName} pediu para pular pergunta -- concordar
               </button>
             ) : selfRequestedSkip ? (
-              <p className="player-view__note">Voce pediu para pular. Aguardando o outro representante concordar...</p>
+              <p className="player-view__note">Voce pediu para pular pergunta. Aguardando o outro representante concordar...</p>
             ) : (
-              <button className="btn btn-ghost" onClick={actions.requestSkip}>Pedir para pular esta pergunta</button>
+              <button className="btn btn-ghost" onClick={actions.requestSkip}>Pular pergunta</button>
             )}
           </div>
         )}
