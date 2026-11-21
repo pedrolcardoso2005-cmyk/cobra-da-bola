@@ -10,7 +10,9 @@ import { answersMatch } from "@cobra/shared";
 import { batch001 } from "../src/questions/bank/batch-001.js";
 import { batch002 } from "../src/questions/bank/batch-002.js";
 import { batch003 } from "../src/questions/bank/batch-003.js";
-import { loadQuestionBank } from "../src/questions/bank/index.js";
+import { loadQuestionBank, RETIRED_SLUGS } from "../src/questions/bank/index.js";
+import { insertBankQuestion } from "../src/db/questions.js";
+import { db } from "../src/db/db.js";
 
 const FOUR_LEVELS = { facil: 25, moderado: 25, medio: 25, dificil: 25 };
 const FIVE_LEVELS = { facil: 20, moderado: 20, medio: 20, dificil: 20, impossivel: 20 };
@@ -100,5 +102,30 @@ describe("correcao de respostas abertas (answersMatch) sobre perguntas reais do 
     assert.ok(answersMatch("leonidas da silva", leonidas.correctAnswer, leonidas.acceptedAnswers));
     assert.ok(!answersMatch("Pele", leonidas.correctAnswer, leonidas.acceptedAnswers));
     assert.ok(!answersMatch("", leonidas.correctAnswer, leonidas.acceptedAnswers));
+  });
+});
+
+describe("banco de perguntas -- slugs aposentados", () => {
+  it("remove do banco as perguntas aposentadas e e idempotente", () => {
+    const sample = batch003[0];
+    const { slug: _slug, ...q } = sample;
+    for (const id of RETIRED_SLUGS) insertBankQuestion(id, { ...q, prompt: `antiga ${id}` });
+    const count = () =>
+      (db.prepare(`SELECT COUNT(*) AS n FROM questions WHERE id IN (${RETIRED_SLUGS.map(() => "?").join(",")})`).get(...RETIRED_SLUGS) as { n: number }).n;
+    assert.equal(count(), RETIRED_SLUGS.length);
+
+    const first = loadQuestionBank();
+    assert.equal(first.removed, RETIRED_SLUGS.length);
+    assert.equal(count(), 0);
+
+    const second = loadQuestionBank();
+    assert.equal(second.removed, 0, "a segunda carga nao deveria remover nada");
+  });
+
+  it("nenhum lote reaproveita um slug aposentado", () => {
+    const retired = new Set(RETIRED_SLUGS);
+    for (const entry of [...batch001, ...batch002, ...batch003]) {
+      assert.ok(!retired.has(entry.slug), `slug aposentado em uso: ${entry.slug}`);
+    }
   });
 });

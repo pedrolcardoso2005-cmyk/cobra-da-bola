@@ -111,6 +111,27 @@ export function insertBankQuestion(id: string, q: Omit<Question, "id">): "insert
   return "inserted";
 }
 
+/**
+ * Deletes the given question ids, ignoring any that don't exist, and
+ * returns how many rows were actually removed. Used by the bank loader to
+ * retire entries that were replaced. Embeddings go with them via
+ * ON DELETE CASCADE.
+ */
+export function deleteQuestionsByIds(ids: readonly string[]): number {
+  if (ids.length === 0) return 0;
+  const stmt = db.prepare("DELETE FROM questions WHERE id = ?");
+  let removed = 0;
+  db.exec("BEGIN");
+  try {
+    for (const id of ids) removed += Number(stmt.run(id).changes);
+    db.exec("COMMIT");
+  } catch (err) {
+    db.exec("ROLLBACK");
+    throw err;
+  }
+  return removed;
+}
+
 export function listQuestions(
   filter: { category?: QuestionCategory; difficulty?: Difficulty; status?: QuestionStatus } = {},
 ): Question[] {
