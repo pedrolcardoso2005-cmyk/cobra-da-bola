@@ -11,6 +11,7 @@ import { batch001 } from "../src/questions/bank/batch-001.js";
 import { batch002 } from "../src/questions/bank/batch-002.js";
 import { batch003 } from "../src/questions/bank/batch-003.js";
 import { batch004 } from "../src/questions/bank/batch-004.js";
+import { batch005 } from "../src/questions/bank/batch-005.js";
 import { loadQuestionBank, RETIRED_SLUGS } from "../src/questions/bank/index.js";
 import { insertBankQuestion } from "../src/db/questions.js";
 import { db } from "../src/db/db.js";
@@ -94,6 +95,7 @@ describe("banco de perguntas -- lote 003", () => {
 // linha aqui.
 const LATER_BATCHES: { label: string; batch: typeof batch001; expected: Record<string, number> }[] = [
   { label: "lote 004", batch: batch004, expected: RAMP_LEVELS },
+  { label: "lote 005", batch: batch005, expected: RAMP_LEVELS },
 ];
 
 for (const [i, { label, batch, expected }] of LATER_BATCHES.entries()) {

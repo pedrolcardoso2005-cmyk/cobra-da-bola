@@ -12,6 +12,11 @@ export const DB_PATH = process.env.DB_PATH ?? `${__dirname}/../../data/cobra.db`
 mkdirSync(dirname(DB_PATH), { recursive: true });
 
 export const db = new DatabaseSync(DB_PATH);
+// Wait up to 5s for a write lock instead of failing at once with "database
+// is locked" when another connection to the same file is writing (e.g. two
+// test files loading the question bank in parallel). Set first, so even the
+// WAL switch below waits.
+db.exec("PRAGMA busy_timeout = 5000;");
 db.exec("PRAGMA journal_mode = WAL;");
 db.exec("PRAGMA foreign_keys = ON;");
 
