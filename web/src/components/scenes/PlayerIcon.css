@@ -1,0 +1,83 @@
+.player-icon {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 60px;
+  gap: 2px;
+  flex-shrink: 0;
+}
+
+.player-icon__svg {
+  width: 42px;
+  height: auto;
+  display: block;
+  overflow: visible;
+}
+
+.player-icon__body {
+  stroke: var(--escama);
+  stroke-width: 3;
+}
+.player-icon__head {
+  stroke: var(--escama);
+  stroke-width: 3;
+  fill: #c98554;
+}
+
+.player-icon--team-a .player-icon__body {
+  fill: var(--lima);
+}
+.player-icon--team-b .player-icon__body {
+  fill: var(--bote);
+}
+.player-icon--neutral .player-icon__body {
+  fill: var(--giz-dim);
+}
+
+.player-icon__name {
+  font-size: 0.6rem;
+  color: var(--giz-dim);
+  max-width: 60px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-align: center;
+}
+
+.player-icon--on-deck .player-icon__svg {
+  filter: drop-shadow(0 0 8px var(--lima));
+}
+.player-icon--on-deck {
+  animation: player-icon-pulse 1200ms ease-in-out infinite;
+}
+@keyframes player-icon-pulse {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.08);
+  }
+}
+.player-icon--on-deck .player-icon__name {
+  color: var(--lima);
+}
+
+.player-icon--classified .player-icon__name {
+  color: var(--lima);
+}
+.player-icon__badge circle {
+  fill: var(--lima);
+  stroke: var(--escama);
+  stroke-width: 2;
+}
+.player-icon__badge-text {
+  font-size: 10px;
+  fill: var(--escama);
+  font-weight: 700;
+}
+
+.player-icon--excluded {
+  opacity: 0.4;
+  filter: grayscale(0.7);
+}

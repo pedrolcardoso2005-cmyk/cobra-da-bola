@@ -4,6 +4,8 @@ import { useAuth } from "../state/AuthContext";
 import { api } from "../lib/api";
 import { CAREER_THEME_LABELS, CATEGORY_LABELS, DIFFICULTIES } from "../lib/labels";
 import { REVEAL_WORD_MS, type CareerTheme, type Difficulty, type PublicQuestion, type QuestionCategory } from "@cobra/shared";
+import { SoloCharacter } from "../components/SoloCharacter";
+import { Fireworks } from "../components/scenes/Fireworks";
 import "../components/CareerBoard.css";
 import "./PlayerView.css";
 import "./SoloView.css";
@@ -275,7 +277,9 @@ export default function SoloView() {
             </div>
 
             {champion ? (
-              <div className="center-page">
+              <div className="center-page" style={{ position: "relative" }}>
+                <Fireworks intense />
+                <SoloCharacter state="champion" />
                 <h1 className="font-display" style={{ color: "var(--lima)", fontSize: "2rem" }}>Voce e o Cobra da Bola!</h1>
                 <p>Chegou a {WIN_SCORE} acertos.</p>
                 <button className="btn btn-primary" onClick={startQuestions}>Jogar de novo</button>
@@ -323,10 +327,13 @@ export default function SoloView() {
                   </button>
                 )}
                 {result && (
-                  <div className={`solo-feedback ${result.skipped ? "" : result.correct ? "is-correct" : "is-wrong"}`}>
-                    <strong>{result.skipped ? "Pulada." : result.correct ? "Acertou!" : "Errou."}</strong> Resposta correta: {result.correctAnswer}
-                    {result.explanation && <p className="solo-feedback__note">{result.explanation}</p>}
-                  </div>
+                  <>
+                    <SoloCharacter state={result.skipped ? "skipped" : result.correct ? "correct" : "wrong"} />
+                    <div className={`solo-feedback ${result.skipped ? "" : result.correct ? "is-correct" : "is-wrong"}`}>
+                      <strong>{result.skipped ? "Pulada." : result.correct ? "Acertou!" : "Errou."}</strong> Resposta correta: {result.correctAnswer}
+                      {result.explanation && <p className="solo-feedback__note">{result.explanation}</p>}
+                    </div>
+                  </>
                 )}
                 {result && !champion && (
                   <button className="btn btn-bote btn-block" disabled={loading} onClick={() => loadNextQuestion([...seenQuestionIds])}>
@@ -383,9 +390,12 @@ export default function SoloView() {
                 )}
 
                 {careerResult && (
-                  <div className={`solo-feedback ${careerResult.skipped ? "" : careerResult.correct ? "is-correct" : "is-wrong"}`}>
-                    <strong>{careerResult.skipped ? "Pulada." : careerResult.correct ? "Acertou!" : "Errou."}</strong> Era: {careerResult.playerName}
-                  </div>
+                  <>
+                    <SoloCharacter state={careerResult.skipped ? "skipped" : careerResult.correct ? "correct" : "wrong"} />
+                    <div className={`solo-feedback ${careerResult.skipped ? "" : careerResult.correct ? "is-correct" : "is-wrong"}`}>
+                      <strong>{careerResult.skipped ? "Pulada." : careerResult.correct ? "Acertou!" : "Errou."}</strong> Era: {careerResult.playerName}
+                    </div>
+                  </>
                 )}
                 {careerResult && (
                   <button className="btn btn-bote btn-block" disabled={loading} onClick={() => loadNextCareer([...seenCareerIds])}>

@@ -323,3 +323,29 @@
   filter: grayscale(0.6) drop-shadow(0 0 10px rgba(255, 122, 26, 0.3));
   opacity: 0.85;
 }
+
+/* --- skipped: funny shrug when both representatives agree to pass --- */
+.presenter--skipped .presenter__mouth {
+  d: path("M 96 114 Q 110 110 124 114");
+}
+.presenter--skipped .presenter__eyebrow-left {
+  transform: translateY(-4px) rotate(-6deg);
+}
+.presenter--skipped .presenter__eyebrow-right {
+  transform: translateY(2px) rotate(8deg);
+}
+.presenter--skipped {
+  animation: shrug-wobble 420ms ease-in-out;
+}
+@keyframes shrug-wobble {
+  0%,
+  100% {
+    transform: rotate(0deg);
+  }
+  30% {
+    transform: rotate(-4deg) translateY(-2px);
+  }
+  60% {
+    transform: rotate(4deg);
+  }
+}

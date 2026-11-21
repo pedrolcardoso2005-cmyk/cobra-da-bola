@@ -1,0 +1,24 @@
+.phase1-scene {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  padding: 1rem;
+  flex-wrap: wrap;
+}
+
+.phase1-scene__team {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  justify-content: center;
+  align-items: flex-end;
+  flex: 1 1 auto;
+  min-width: 140px;
+}
+
+.phase1-scene__vs {
+  color: var(--escama);
+  font-size: 1.4rem;
+  flex-shrink: 0;
+}

@@ -7,6 +7,9 @@ import { ScoreBoard } from "../components/ScoreBoard";
 import { CareerBoard } from "../components/CareerBoard";
 import { BracketBoard } from "../components/BracketBoard";
 import { ChampionScreen } from "../components/ChampionScreen";
+import { Phase1Scene } from "../components/scenes/Phase1Scene";
+import { CareerScene } from "../components/scenes/CareerScene";
+import { BracketScene } from "../components/scenes/BracketScene";
 import { sfx } from "../sound/sfx";
 import { careerQuotaFor } from "@cobra/shared";
 import "./ScreenView.css";
@@ -78,34 +81,43 @@ export default function ScreenView() {
         {match.phase === "lobby" && <LobbyBoard match={match} />}
 
         {match.phase === "phase1" && match.teams && (
-          <ScoreBoard teamA={match.teams[0]} teamB={match.teams[1]} nameOf={nameOf} />
+          <>
+            <Phase1Scene match={match} />
+            <ScoreBoard teamA={match.teams[0]} teamB={match.teams[1]} nameOf={nameOf} />
+          </>
         )}
 
         {match.phase === "career" && match.career && (
-          <CareerBoard
-            clubs={careerClubs ?? []}
-            totalClubs={4}
-            cohort={match.players.filter((p) => match.career!.eligiblePlayerIds.includes(p.id) || p.careerRank)}
-            quota={careerQuotaFor(match.career.eligiblePlayerIds.length + match.careerResults.length)}
-            classifiedCount={match.careerResults.length}
-          />
+          <>
+            <CareerScene match={match} />
+            <CareerBoard
+              clubs={careerClubs ?? []}
+              totalClubs={4}
+              cohort={match.players.filter((p) => match.career!.eligiblePlayerIds.includes(p.id) || p.careerRank)}
+              quota={careerQuotaFor(match.career.eligiblePlayerIds.length + match.careerResults.length)}
+              classifiedCount={match.careerResults.length}
+            />
+          </>
         )}
 
         {(match.phase === "semifinal" || match.phase === "final") && (match.semifinal || match.final) && (
-          <BracketBoard
-            current={(match.phase === "semifinal" ? match.semifinal![match.semifinalActiveIndex!] : match.final)!}
-            nameOf={nameOf}
-            semifinals={match.semifinal}
-            activeIndex={match.semifinalActiveIndex}
-            final={match.final}
-          />
+          <>
+            <BracketScene match={match} variant={match.phase === "semifinal" ? "semifinal" : "final"} />
+            <BracketBoard
+              current={(match.phase === "semifinal" ? match.semifinal![match.semifinalActiveIndex!] : match.final)!}
+              nameOf={nameOf}
+              semifinals={match.semifinal}
+              activeIndex={match.semifinalActiveIndex}
+              final={match.final}
+            />
+          </>
         )}
 
         {match.phase === "champion" && <ChampionScreen match={match} />}
 
         {question && match.phase !== "champion" && (
           <div className="screen-main__question">
-            <QuestionPanel prompt={question.prompt} choices={question.choices} />
+            <QuestionPanel prompt={question.prompt} choices={question.choices} label="COBRA DA BOLA" />
           </div>
         )}
 
@@ -136,7 +148,7 @@ function cueToPresenter(type: string): PresenterState {
   if (type === "presenting_question") return "talking";
   if (type === "semifinal_start") return "semifinal";
   if (type === "final_start") return "final";
-  if (["correct", "wrong", "qualified", "eliminated", "champion"].includes(type)) return type as PresenterState;
+  if (["correct", "wrong", "qualified", "eliminated", "champion", "skipped"].includes(type)) return type as PresenterState;
   return "idle";
 }
 

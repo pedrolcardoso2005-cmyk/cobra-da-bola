@@ -8,20 +8,6 @@
   text-align: center;
 }
 
-.champion-screen__burst {
-  position: absolute;
-  inset: -40px;
-  background: repeating-conic-gradient(from 0deg, rgba(212, 240, 0, 0.12) 0deg 8deg, transparent 8deg 16deg);
-  animation: burst-spin 18s linear infinite;
-  z-index: -1;
-}
-
-@keyframes burst-spin {
-  to {
-    transform: rotate(360deg);
-  }
-}
-
 .champion-screen__kicker {
   color: var(--giz-dim);
   font-size: 1.3rem;
@@ -55,6 +41,10 @@
   gap: 0.5rem;
 }
 
+.champion-card__avatar-wrap {
+  position: relative;
+}
+
 .champion-card__avatar {
   width: 72px;
   height: 72px;
@@ -67,6 +57,35 @@
   font-family: var(--font-display);
   font-size: 1.6rem;
   border: 3px solid var(--escama);
+}
+
+.champion-card__crown {
+  position: absolute;
+  top: -24px;
+  left: 50%;
+  width: 40px;
+  height: auto;
+  fill: var(--lima);
+  stroke: var(--escama);
+  stroke-width: 1.5;
+  opacity: 0;
+  transform: translateX(-50%) translateY(-30px) scale(0.6);
+  animation: crown-land 480ms 500ms cubic-bezier(0.2, 0.9, 0.3, 1.2) forwards;
+}
+
+@keyframes crown-land {
+  0% {
+    transform: translateX(-50%) translateY(-30px) scale(0.6);
+    opacity: 0;
+  }
+  70% {
+    transform: translateX(-50%) translateY(4px) scale(1.05);
+    opacity: 1;
+  }
+  100% {
+    transform: translateX(-50%) translateY(0) scale(1);
+    opacity: 1;
+  }
 }
 
 .champion-card__name {

@@ -68,6 +68,9 @@ describe("pular pergunta por consentimento mutuo -- fase 1", () => {
     state = applyAction(state, { type: "REQUEST_SKIP", playerId: "2" });
     assert.equal(state.lastAnswer!.skipped, true);
     assert.equal(state.lastAnswer!.pointsAwardedTo, null);
+    // Fase 6: Lucas Tilt reage com humor ao pulo -- a dica de apresentacao
+    // muda para "skipped", nunca fica "idle" nem herda a dica anterior.
+    assert.deepEqual(state.presenterCue, { type: "skipped" });
     assert.equal(state.lastAnswer!.playerId, null);
     assert.equal(state.teams![0].score, 0);
     assert.equal(state.teams![1].score, 0);

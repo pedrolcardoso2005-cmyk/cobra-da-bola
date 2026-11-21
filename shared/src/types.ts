@@ -259,7 +259,8 @@ export type PresenterCue =
   | { type: "eliminated"; playerId: string }
   | { type: "semifinal_start" }
   | { type: "final_start" }
-  | { type: "champion"; playerId: string };
+  | { type: "champion"; playerId: string }
+  | { type: "skipped" };
 
 /** View of MatchState sent to a given player: hides correct answers and
  * other players' timers, per the rules. */

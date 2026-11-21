@@ -441,7 +441,7 @@ function resolveSkip(state: MatchState): void {
   }
   if (state.timer) state.timer.endsAt = null;
   state.lastAnswer = { playerId: null, submittedAnswer: null, correct: false, timedOut: false, skipped: true, pointsAwardedTo: null };
-  state.presenterCue = { type: "idle" };
+  state.presenterCue = { type: "skipped" };
   pushHistory(state, "skip", "Pergunta pulada de comum acordo entre os representantes");
 }
 

@@ -1,4 +1,5 @@
 import type { MatchState } from "@cobra/shared";
+import { Fireworks } from "./scenes/Fireworks";
 import "./ChampionScreen.css";
 
 export function ChampionScreen({ match }: { match: MatchState }) {
@@ -7,12 +8,17 @@ export function ChampionScreen({ match }: { match: MatchState }) {
 
   return (
     <div className="champion-screen">
-      <div className="champion-screen__burst" aria-hidden="true" />
+      <Fireworks intense />
       <span className="font-display champion-screen__kicker">Temos um</span>
       <h1 className="font-display champion-screen__title">Cobra da Bola!</h1>
       {champion && (
         <div className="champion-card sticker tilt-left">
-          <div className="champion-card__avatar">{initials(champion.displayName)}</div>
+          <div className="champion-card__avatar-wrap">
+            <svg viewBox="0 0 48 30" className="champion-card__crown" aria-hidden="true">
+              <polygon points="2,28 2,14 12,20 24,4 36,20 46,14 46,28" />
+            </svg>
+            <div className="champion-card__avatar">{initials(champion.displayName)}</div>
+          </div>
           <span className="font-display champion-card__name">{champion.displayName}</span>
           <span className="font-score champion-card__score">
             {match.final ? Math.max(match.final.scoreA, match.final.scoreB) : 10}

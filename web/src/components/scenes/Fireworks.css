@@ -1,0 +1,38 @@
+.fireworks {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: visible;
+}
+
+.fireworks__particle {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 8px;
+  height: 8px;
+  border-radius: 2px;
+  background: var(--color, var(--lima));
+  transform: translate(-50%, -50%) rotate(var(--angle)) translateY(0) scale(0.4);
+  opacity: 0;
+  animation: firework-burst 1100ms ease-out var(--delay) infinite;
+}
+
+.fireworks--intense .fireworks__particle {
+  width: 11px;
+  height: 11px;
+}
+
+@keyframes firework-burst {
+  0% {
+    transform: translate(-50%, -50%) rotate(var(--angle)) translateY(0) scale(0.4);
+    opacity: 0;
+  }
+  15% {
+    opacity: 1;
+  }
+  100% {
+    transform: translate(-50%, -50%) rotate(var(--angle)) translateY(-130px) scale(1);
+    opacity: 0;
+  }
+}

@@ -11,7 +11,8 @@ export type PresenterState =
   | "eliminated"
   | "semifinal"
   | "final"
-  | "champion";
+  | "champion"
+  | "skipped";
 
 const CAPTIONS: Record<PresenterState, string | null> = {
   idle: null,
@@ -24,6 +25,7 @@ const CAPTIONS: Record<PresenterState, string | null> = {
   semifinal: "SEMIFINAL!",
   final: "FINAL!",
   champion: "CAMPEAO!",
+  skipped: "IHH, FUGIU!",
 };
 
 /**

@@ -1,0 +1,19 @@
+.career-scene {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 1rem;
+}
+
+.career-scene__title {
+  color: var(--escama);
+  font-size: 1rem;
+}
+
+.career-scene__players {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  justify-content: center;
+}
