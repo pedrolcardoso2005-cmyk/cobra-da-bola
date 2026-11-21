@@ -36,7 +36,7 @@ WEB_ORIGIN=http://localhost:5173
 # Chave da API da Anthropic (geracao das perguntas). Nunca definir um
 # equivalente com prefixo VITE_ -- essa chave nao pode chegar ao navegador.
 # ANTHROPIC_API_KEY=
-# AI_QUESTIONS_MODEL=claude-sonnet-4-5
+# AI_QUESTIONS_MODEL=claude-sonnet-5-5
 
 # Chave da API da OpenAI, usada só para embeddings (checagem de duplicata
 # semantica). Opcional: sem ela, a deduplicacao usa so similaridade de texto.

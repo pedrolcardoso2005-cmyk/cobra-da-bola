@@ -26,7 +26,7 @@ export function loadAiQuestionsConfig(): AiQuestionsConfig {
   return {
     enabled: process.env.AI_QUESTIONS_ENABLED === "true",
     anthropicApiKey: process.env.ANTHROPIC_API_KEY ?? null,
-    anthropicModel: process.env.AI_QUESTIONS_MODEL ?? "claude-sonnet-4-5",
+    anthropicModel: process.env.AI_QUESTIONS_MODEL ?? "claude-sonnet-5-5",
     openaiApiKey: process.env.OPENAI_API_KEY ?? null,
     embeddingModel: process.env.AI_QUESTIONS_EMBEDDING_MODEL ?? "text-embedding-3-small",
     minStockPerBucket: Number(process.env.AI_QUESTIONS_MIN_STOCK ?? 15),
