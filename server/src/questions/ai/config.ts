@@ -16,6 +16,7 @@ export interface AiQuestionsConfig {
   targetStockPerBucket: number;
   batchSize: number;
   maxBatchesPerDay: number;
+  maxBucketsPerRun: number;
   autoApprove: boolean;
   duplicateRejectThreshold: number;
   duplicateReviewThreshold: number;
@@ -31,7 +32,13 @@ export function loadAiQuestionsConfig(): AiQuestionsConfig {
     minStockPerBucket: Number(process.env.AI_QUESTIONS_MIN_STOCK ?? 15),
     targetStockPerBucket: Number(process.env.AI_QUESTIONS_TARGET_STOCK ?? 40),
     batchSize: Number(process.env.AI_QUESTIONS_BATCH_SIZE ?? 20),
-    maxBatchesPerDay: Number(process.env.AI_QUESTIONS_MAX_BATCHES_PER_DAY ?? 6),
+    // 70 buckets no total (14 categorias x 5 dificuldades). Com 4 por
+    // execucao e ate 12 lotes/dia, um bucket deficitario qualquer e
+    // alcancado em no maximo ~6 dias (70/12), e cada lote pedido custa no
+    // maximo "batchSize" perguntas -- crescimento prudente, nunca "gerar
+    // tudo de uma vez".
+    maxBatchesPerDay: Number(process.env.AI_QUESTIONS_MAX_BATCHES_PER_DAY ?? 12),
+    maxBucketsPerRun: Number(process.env.AI_QUESTIONS_MAX_BUCKETS_PER_RUN ?? 4),
     autoApprove: process.env.AI_QUESTIONS_AUTO_APPROVE === "true",
     duplicateRejectThreshold: Number(process.env.AI_QUESTIONS_DUP_REJECT_THRESHOLD ?? 0.95),
     duplicateReviewThreshold: Number(process.env.AI_QUESTIONS_DUP_REVIEW_THRESHOLD ?? 0.85),

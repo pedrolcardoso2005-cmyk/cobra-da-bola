@@ -16,7 +16,7 @@ import { registerSocketHandlers } from "./realtime/socket.js";
 import { seedDatabase } from "./questions/seed.js";
 import { loadQuestionBank } from "./questions/bank/index.js";
 import { loadAiQuestionsConfig } from "./questions/ai/config.js";
-import { checkAndTopUp } from "./questions/ai/stock.js";
+import { checkAndTopUp, logTopUpSummary } from "./questions/ai/stock.js";
 
 seedDatabase();
 const bankResult = loadQuestionBank();
@@ -32,25 +32,22 @@ if (bankResult.inserted > 0) {
 // so simply deploying this code changes nothing in production by itself.
 const aiQuestionsConfig = loadAiQuestionsConfig();
 if (aiQuestionsConfig.enabled) {
-  checkAndTopUp(aiQuestionsConfig)
-    .then((summary) => {
-      if (!summary.skipped && summary.batches.length > 0) {
+  // Every run logs explicitly -- whether it was skipped (and why) or which
+  // buckets it processed (with requested/generated/approved/pending/
+  // rejected counts) -- so "a IA realmente rodou?" is always answerable
+  // from the Railway logs alone, never a silent no-op.
+  const runAndLog = (trigger: string) =>
+    checkAndTopUp(aiQuestionsConfig)
+      .then((summary) => logTopUpSummary(trigger, summary))
+      .catch((err) => {
         // eslint-disable-next-line no-console
-        console.log(`Estoque de perguntas (IA): ${summary.batches.length} lote(s) processado(s) no boot.`);
-      }
-    })
-    .catch((err) => {
-      // eslint-disable-next-line no-console
-      console.error("[ai-questions] falha ao verificar estoque:", err instanceof Error ? err.message : err);
-    });
+        console.error(`[ai-questions] ${trigger}: falha inesperada ao verificar estoque -- ${err instanceof Error ? err.message : err}`);
+      });
+
+  void runAndLog("boot");
   // Periodic re-check while the process is up (every 6h) so stock keeps
   // getting topped up during long-running deploys, not just at boot.
-  setInterval(() => {
-    checkAndTopUp(aiQuestionsConfig).catch((err) => {
-      // eslint-disable-next-line no-console
-      console.error("[ai-questions] falha ao verificar estoque:", err instanceof Error ? err.message : err);
-    });
-  }, 6 * 60 * 60 * 1000);
+  setInterval(() => void runAndLog("intervalo de 6h"), 6 * 60 * 60 * 1000);
 }
 
 const app = express();

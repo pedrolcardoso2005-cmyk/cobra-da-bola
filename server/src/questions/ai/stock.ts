@@ -50,8 +50,10 @@ export interface TopUpSummary {
  * configured minimum -- never more than the daily cap, and never if the
  * pipeline itself is disabled or missing its API key. Always resolves (never
  * rejects): called fire-and-forget from index.ts at boot, so a failure here
- * must never surface as an unhandled rejection. */
-export async function checkAndTopUp(config: AiQuestionsConfig, maxBucketsPerRun = 3): Promise<TopUpSummary> {
+ * must never surface as an unhandled rejection. `maxBucketsPerRun` defaults
+ * to config.maxBucketsPerRun; the parameter only exists so tests can override
+ * it without touching env vars. */
+export async function checkAndTopUp(config: AiQuestionsConfig, maxBucketsPerRun = config.maxBucketsPerRun): Promise<TopUpSummary> {
   if (!config.enabled) return { skipped: true, reason: "AI_QUESTIONS_ENABLED nao e 'true'", batches: [] };
   if (!config.anthropicApiKey) return { skipped: true, reason: "ANTHROPIC_API_KEY ausente", batches: [] };
   if (running) return { skipped: true, reason: "ja ha uma verificacao de estoque em andamento", batches: [] };
@@ -68,6 +70,10 @@ export async function checkAndTopUp(config: AiQuestionsConfig, maxBucketsPerRun 
       .filter((b) => b.deficit > 0)
       .sort((a, b) => b.deficit - a.deficit);
 
+    if (report.length === 0) {
+      return { skipped: true, reason: "estoque suficiente -- nenhum bucket abaixo do minimo configurado", batches: [] };
+    }
+
     const remainingBudget = config.maxBatchesPerDay - alreadyToday;
     const toProcess = report.slice(0, Math.min(maxBucketsPerRun, remainingBudget));
 
@@ -81,5 +87,40 @@ export async function checkAndTopUp(config: AiQuestionsConfig, maxBucketsPerRun 
     return { skipped: false, batches };
   } finally {
     running = false;
+  }
+}
+
+/** Pure formatter (no console calls, so it's directly testable): turns a
+ * TopUpSummary into the exact lines that should reach the Railway logs --
+ * every skip has an explicit, human-readable reason (never silent), and
+ * every bucket processed reports requested/generated/approved/pending/
+ * rejected counts plus any error, so "a IA realmente rodou?" is always
+ * answerable just by reading the logs. Never includes API keys or any
+ * secret -- only numeric counts, category/difficulty labels, and whatever
+ * error message the Anthropic call itself returned. */
+export function formatTopUpLog(trigger: string, summary: TopUpSummary): string[] {
+  if (summary.skipped) {
+    return [`[ai-questions] ${trigger}: pulado -- ${summary.reason ?? "motivo desconhecido"}`];
+  }
+  if (summary.batches.length === 0) {
+    return [`[ai-questions] ${trigger}: executou, mas nao processou nenhum bucket (orcamento diario esgotado no meio da execucao)`];
+  }
+  return summary.batches.map(({ category, difficulty, result }) => {
+    const base =
+      `[ai-questions] ${trigger} ${category}/${difficulty}: ` +
+      `pedidas=${result.requested} geradas=${result.generated} ` +
+      `aprovadas=${result.autoApproved} pendentes=${result.flaggedForReview} ` +
+      `rejeitadas_validacao=${result.rejectedValidation} rejeitadas_duplicata=${result.rejectedDuplicate}`;
+    return result.error ? `${base} ERRO="${result.error}"` : base;
+  });
+}
+
+/** Thin side-effecting wrapper around formatTopUpLog -- the only place in
+ * this module that actually calls console.log/console.error. */
+export function logTopUpSummary(trigger: string, summary: TopUpSummary): void {
+  for (const line of formatTopUpLog(trigger, summary)) {
+    // eslint-disable-next-line no-console
+    if (line.includes("ERRO=")) console.error(line);
+    else console.log(line);
   }
 }
