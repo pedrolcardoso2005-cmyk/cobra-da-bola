@@ -81,7 +81,11 @@ function matchesForUser(userId: string, limit = 20): SoloMatchSummary[] {
               SUM(CASE WHEN result = 'wrong' THEN 1 ELSE 0 END) AS wrong,
               SUM(CASE WHEN result = 'skipped' THEN 1 ELSE 0 END) AS skipped
        FROM solo_answer_log WHERE user_id = ? AND kind = 'pergunta'
-       GROUP BY session_id ORDER BY startedAt DESC LIMIT ?`,
+       GROUP BY session_id
+       -- Two sessions can share the same millisecond in \`at\`; break the tie
+       -- by insertion order. \`id\` is a random nanoid, so use the implicit
+       -- rowid (monotonic on insert) of each session's first answer.
+       ORDER BY startedAt DESC, MIN(rowid) DESC LIMIT ?`,
     )
     .all(userId, limit) as { sessionId: string; startedAt: number; correct: number; wrong: number; skipped: number }[];
   return rows.map((r) => ({ ...r, reachedChampion: r.correct >= CHAMPION_SCORE }));
