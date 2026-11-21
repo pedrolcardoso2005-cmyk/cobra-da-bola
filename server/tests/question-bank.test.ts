@@ -1,8 +1,8 @@
 // Quality gates for the permanent question bank. These check the batches
 // that exist so far are well-formed and that loading them is safe to
-// repeat -- NOT that the bank has reached 3000 questions yet (see
+// repeat -- NOT that the bank has reached 1000 questions yet (see
 // server/src/questions/bank/PROGRESS.md for how many are done). A test
-// asserting the full 3000/750-per-difficulty target belongs here only once
+// asserting the full 1000/200-per-difficulty target belongs here only once
 // that target is actually met.
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
@@ -10,12 +10,15 @@ import { answersMatch } from "@cobra/shared";
 import { batch001 } from "../src/questions/bank/batch-001.js";
 import { batch002 } from "../src/questions/bank/batch-002.js";
 import { batch003 } from "../src/questions/bank/batch-003.js";
+import { batch004 } from "../src/questions/bank/batch-004.js";
 import { loadQuestionBank, RETIRED_SLUGS } from "../src/questions/bank/index.js";
 import { insertBankQuestion } from "../src/db/questions.js";
 import { db } from "../src/db/db.js";
 
 const FOUR_LEVELS = { facil: 25, moderado: 25, medio: 25, dificil: 25 };
 const FIVE_LEVELS = { facil: 20, moderado: 20, medio: 20, dificil: 20, impossivel: 20 };
+// Lotes 004-009 (e 010 com 16/16/16/16/36) completam 200 por nivel = 1.000.
+const RAMP_LEVELS = { facil: 19, moderado: 19, medio: 19, dificil: 19, impossivel: 24 };
 
 function checkBatchShape(batch: typeof batch001, label: string, expected: Record<string, number> = FOUR_LEVELS) {
   assert.equal(batch.length, 100, `${label} deveria ter 100 perguntas`);
@@ -85,6 +88,32 @@ describe("banco de perguntas -- lote 003", () => {
     }
   });
 });
+
+// Lotes a partir do 004: mesma checagem de formato e de nao repeticao
+// contra todos os lotes anteriores. Para um lote novo, basta adicionar uma
+// linha aqui.
+const LATER_BATCHES: { label: string; batch: typeof batch001; expected: Record<string, number> }[] = [
+  { label: "lote 004", batch: batch004, expected: RAMP_LEVELS },
+];
+
+for (const [i, { label, batch, expected }] of LATER_BATCHES.entries()) {
+  describe(`banco de perguntas -- ${label}`, () => {
+    it("tem 100 perguntas na distribuicao planejada, sem duplicadas internas", () => {
+      checkBatchShape(batch, label, expected);
+    });
+
+    it("nao repete enunciado nem slug de nenhum lote anterior", () => {
+      const previous = [batch001, batch002, batch003, ...LATER_BATCHES.slice(0, i).map((b) => b.batch)].flat();
+      const prompts = new Set(previous.map((q) => q.prompt));
+      const slugs = new Set(previous.map((q) => q.slug));
+      for (const entry of batch) {
+        assert.ok(!prompts.has(entry.prompt), `pergunta do ${label} repete lote anterior: ${entry.prompt}`);
+        assert.ok(!slugs.has(entry.slug), `slug do ${label} repete lote anterior: ${entry.slug}`);
+        assert.ok(entry.explanation?.trim(), `explicacao vazia em ${entry.slug}`);
+      }
+    });
+  });
+}
 
 describe("correcao de respostas abertas (answersMatch) sobre perguntas reais do banco", () => {
   it("aceita variacoes de maiusculas, acentos e espacos para uma resposta do banco", () => {
