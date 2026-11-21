@@ -61,6 +61,52 @@ Regras obrigatorias:
 - "explanation" e uma frase curta com o contexto do fato, para o apresentador.
 - Ao terminar a pesquisa, chame a ferramenta "${TOOL_NAME}" exatamente uma vez com o array completo de perguntas geradas. Nao chame a ferramenta antes de confirmar os fatos.`;
 
+// Harder difficulties need more web-search/verification before the model
+// can confirm a fact (see SYSTEM_PROMPT above), and search-tool-result
+// content counts toward max_tokens just like the model's own text (see
+// anthropicClient.ts) -- so a budget sized only by `count` starves large
+// "dificil"/"impossivel" batches long before they reach the final tool
+// call (observed in production: stop_reason=max_tokens, continuacoes=0).
+// Scaled per question by difficulty, with a floor for small batches and a
+// ceiling well under the model's 128k synchronous-request limit.
+const TOKENS_PER_QUESTION: Record<Difficulty, number> = {
+  facil: 500,
+  moderado: 650,
+  medio: 850,
+  dificil: 1200,
+  impossivel: 1800,
+};
+const MIN_MAX_TOKENS = 6000;
+const MAX_MAX_TOKENS = 64000;
+
+function maxTokensFor(difficulty: Difficulty, count: number): number {
+  return Math.min(MAX_MAX_TOKENS, Math.max(MIN_MAX_TOKENS, count * TOKENS_PER_QUESTION[difficulty]));
+}
+
+/** Pulls the generated questions array out of the tool call's `input`,
+ * tolerating the shapes models have actually sent in production even
+ * though the schema asks for `{ questions: [...] }`: the array sent
+ * directly as `input` (schema flattening, seen for larger batches), or
+ * `questions` double-encoded as a JSON string. Never relaxes per-question
+ * validation -- that still happens in validate.ts/pipeline.ts on whatever
+ * array comes back here. Returns null when no array can be found at all. */
+function extractQuestionsArray(toolInput: unknown): unknown[] | null {
+  if (Array.isArray(toolInput)) return toolInput;
+  if (!toolInput || typeof toolInput !== "object") return null;
+  const raw = (toolInput as { questions?: unknown }).questions;
+  if (Array.isArray(raw)) return raw;
+  if (typeof raw === "string") {
+    try {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) return parsed;
+    } catch {
+      // falls through to null below -- an unparseable string is not a
+      // valid questions array either.
+    }
+  }
+  return null;
+}
+
 export interface GenerateBatchParams {
   apiKey: string;
   model: string;
@@ -101,10 +147,10 @@ Responda chamando a ferramenta "${TOOL_NAME}" com exatamente ${params.count} per
     toolName: TOOL_NAME,
     toolInputSchema: TOOL_INPUT_SCHEMA,
     useWebSearch: params.useWebSearch,
-    maxTokens: Math.max(4000, params.count * 400),
+    maxTokens: maxTokensFor(params.difficulty, params.count),
   });
 
-  if (!result.toolInput || typeof result.toolInput !== "object") {
+  if (!result.toolInput) {
     return {
       candidates: [],
       stopReason: result.stopReason,
@@ -112,13 +158,13 @@ Responda chamando a ferramenta "${TOOL_NAME}" com exatamente ${params.count} per
       diagnostic: `Anthropic nao chamou a ferramenta ${TOOL_NAME} (stop_reason=${result.stopReason ?? "ausente"}; continuacoes=${result.continuationCount})`,
     };
   }
-  const questions = (result.toolInput as { questions?: unknown }).questions;
-  if (!Array.isArray(questions)) {
+  const questions = extractQuestionsArray(result.toolInput);
+  if (!questions) {
     return {
       candidates: [],
       stopReason: result.stopReason,
       usage: result.usage,
-      diagnostic: `${TOOL_NAME} foi chamada, mas o campo questions nao e um array`,
+      diagnostic: `${TOOL_NAME} foi chamada, mas o campo questions nao e um array (nem na raiz do input, nem em input.questions)`,
     };
   }
   if (questions.length === 0) {
