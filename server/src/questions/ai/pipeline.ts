@@ -64,6 +64,7 @@ export async function runGenerationBatch(
 
   let candidates: Awaited<ReturnType<typeof generateQuestionBatch>>["candidates"] = [];
   let usage: RunBatchResult["usage"] = null;
+  let generationDiagnostic: string | null = null;
   try {
     const textPoolForPrompt = loadTextPool()
       .filter((p) => p.category === category)
@@ -80,6 +81,7 @@ export async function runGenerationBatch(
     });
     candidates = generation.candidates;
     usage = generation.usage;
+    generationDiagnostic = generation.diagnostic;
   } catch (err) {
     const result = { ...base, error: err instanceof Error ? err.message : String(err) };
     logResult(config, category, difficulty, result, startedAt);
@@ -179,7 +181,7 @@ export async function runGenerationBatch(
     rejectedDuplicate,
     flaggedForReview,
     autoApproved,
-    error: null,
+    error: generationDiagnostic,
     usage,
   };
   logResult(config, category, difficulty, result, startedAt);
