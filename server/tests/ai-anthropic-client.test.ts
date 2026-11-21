@@ -56,7 +56,7 @@ describe("callAnthropicForStructuredOutput", () => {
     assert.deepEqual(result.usage, { inputTokens: 220, outputTokens: 110 });
 
     const messages = requests[1].messages as { role: string; content: unknown }[];
-    assert.equal(messages.length, 3);
+    assert.equal(messages.length, 2);
     assert.equal(messages[0].role, "user");
     assert.equal(messages[1].role, "assistant");
     assert.deepEqual(messages[1].content, [{ type: "server_tool_use", id: "srv_1", name: "web_search", input: { query: "futebol" } }]);
