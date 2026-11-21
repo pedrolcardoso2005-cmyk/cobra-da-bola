@@ -12,8 +12,9 @@
 | 004 | `batch-004.ts` | 100 | 19 | 19 | 19 | 19 | 24 | Concluido, testado (escrito a mao; dificil/impossivel conferidos na web) |
 | 005 | `batch-005.ts` | 100 | 19 | 19 | 19 | 19 | 24 | Concluido, testado (escrito a mao; dificil/impossivel conferidos na web) |
 | 006 | `batch-006.ts` | 100 | 19 | 19 | 19 | 19 | 24 | Concluido, testado (escrito a mao; dificil/impossivel conferidos na web) |
+| 007 | `batch-007.ts` | 100 | 19 | 19 | 19 | 19 | 24 | Concluido, testado (escrito a mao; dificil/impossivel conferidos na web) |
 
-**Total concluido: 600 perguntas** (facil 127, moderado 127, medio 127, dificil 127, impossivel 92).
+**Total concluido: 700 perguntas** (facil 146, moderado 146, medio 146, dificil 146, impossivel 116).
 
 Slugs: `bN-f-NN`, `bN-mo-NN`, `bN-me-NN`, `bN-d-NN`, `bN-i-NN`.
 
