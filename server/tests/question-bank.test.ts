@@ -15,6 +15,7 @@ import { batch005 } from "../src/questions/bank/batch-005.js";
 import { batch006 } from "../src/questions/bank/batch-006.js";
 import { batch007 } from "../src/questions/bank/batch-007.js";
 import { batch008 } from "../src/questions/bank/batch-008.js";
+import { batch009 } from "../src/questions/bank/batch-009.js";
 import { loadQuestionBank, RETIRED_SLUGS } from "../src/questions/bank/index.js";
 import { insertBankQuestion } from "../src/db/questions.js";
 import { db } from "../src/db/db.js";
@@ -102,6 +103,7 @@ const LATER_BATCHES: { label: string; batch: typeof batch001; expected: Record<s
   { label: "lote 006", batch: batch006, expected: RAMP_LEVELS },
   { label: "lote 007", batch: batch007, expected: RAMP_LEVELS },
   { label: "lote 008", batch: batch008, expected: RAMP_LEVELS },
+  { label: "lote 009", batch: batch009, expected: RAMP_LEVELS },
 ];
 
 for (const [i, { label, batch, expected }] of LATER_BATCHES.entries()) {
