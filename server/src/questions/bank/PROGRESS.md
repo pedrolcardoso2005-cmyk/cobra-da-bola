@@ -4,13 +4,17 @@
 
 ## Status atual
 
-| Lote | Arquivo | Perguntas | Facil | Moderado | Medio | Dificil | Status |
-|---|---|---|---|---|---|---|---|
-| 001 | `batch-001.ts` | 100 | 25 | 25 | 25 | 25 | Concluido, carregado, testado (corrigido 2x, ver abaixo) |
-| 002 | `batch-002.ts` | 100 | 25 | 25 | 25 | 25 | Concluido, carregado, testado |
+| Lote | Arquivo | Perguntas | Facil | Moderado | Medio | Dificil | Impossivel | Status |
+|---|---|---|---|---|---|---|---|---|
+| 001 | `batch-001.ts` | 100 | 25 | 25 | 25 | 25 | 0 | Concluido, carregado, testado (corrigido 2x, ver abaixo) |
+| 002 | `batch-002.ts` | 100 | 25 | 25 | 25 | 25 | 0 | Concluido, carregado, testado |
+| 003 | `batch-003.ts` | 100 | 20 | 20 | 20 | 20 | 20 | Concluido, testado (escrito a mao, sem API de IA) |
 
-**Total concluido: 200 / 3000 (6,7%).**
-**Faltam: 2.800 perguntas (28 lotes de 100).**
+**Total concluido: 300 perguntas** (facil 70, moderado 70, medio 70, dificil 70, impossivel 20).
+
+A partir do lote 003 cada lote tem 20 perguntas em cada uma das 5 dificuldades
+(incluindo `impossivel`), com slugs `bN-f-NN`, `bN-mo-NN`, `bN-me-NN`, `bN-d-NN`,
+`bN-i-NN`. Proximos lotes planejados: 004 a 007.
 
 ## Correcoes aplicadas ao lote 001
 
@@ -62,11 +66,12 @@ de Neymar no mesmo verao).
 
 ## Como continuar
 
-1. Criar `batch-003.ts` seguindo o mesmo formato de `batch-001.ts`/`batch-002.ts`
-   (slugs `b3-f-NN`, `b3-m-NN`, `b3-d-NN`, `b3-h-NN`), com 25 perguntas por dificuldade.
-2. Antes de escrever, reler as 66 perguntas originais (`seed.ts`) e os lotes 001 e 002
-   na integra (nao so um resumo) para nao repetir fatos na mesma direcao.
-3. Adicionar `batch003` ao array `batches` em `bank/index.ts`.
+1. Criar o proximo `batch-NNN.ts` no mesmo formato de `batch-003.ts`
+   (20 perguntas por dificuldade, 5 dificuldades, slugs `bN-f/mo/me/d/i-NN`).
+2. Antes de escrever, reler as perguntas originais (`seed.ts`) e TODOS os lotes
+   anteriores na integra (nao so um resumo) para nao repetir fatos na mesma direcao.
+3. Adicionar o lote ao array `batches` em `bank/index.ts` e um bloco de teste em
+   `server/tests/question-bank.test.ts` (usando `FIVE_LEVELS`).
 4. Rodar `npm test --workspace server` (o teste de idempotencia confirma que nada
    foi duplicado) e, opcionalmente, iniciar o servidor para o loader inserir no
    banco local.
@@ -74,3 +79,11 @@ de Neymar no mesmo verao).
 6. So quando a soma de todos os lotes chegar a 3000 (750 por dificuldade), rodar a
    validacao final completa (contagem exata, ids unicos, fontes preenchidas) antes
    de cogitar publicar.
+
+## Metodologia (lote 003)
+
+Escrito a mao, sem nenhuma chamada de API de IA e sem o pipeline de `questions/ai/`.
+Cada pergunta foi conferida contra o texto completo de `seed.ts`, `batch-001.ts` e
+`batch-002.ts`. Foram evitados de proposito fatos com contagem disputada ou mutavel:
+artilharias divididas (Copas de 1962, 1994 e 2010), nomes de estadios que mudam por
+patrocinio, e recordes ainda em aberto (ex.: maior artilheiro da selecao brasileira).

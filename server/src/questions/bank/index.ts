@@ -8,9 +8,10 @@
 import { insertBankQuestion } from "../../db/questions.js";
 import { batch001 } from "./batch-001.js";
 import { batch002 } from "./batch-002.js";
+import { batch003 } from "./batch-003.js";
 import type { BankQuestion } from "./batch-001.js";
 
-const batches: BankQuestion[][] = [batch001, batch002];
+const batches: BankQuestion[][] = [batch001, batch002, batch003];
 
 export interface BankLoadResult {
   inserted: number;
