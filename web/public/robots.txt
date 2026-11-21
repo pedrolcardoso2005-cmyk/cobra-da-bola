@@ -1,2 +1,12 @@
 User-agent: *
 Allow: /
+Disallow: /api/
+Disallow: /sala/
+Disallow: /perfil
+Disallow: /historico
+Disallow: /ranking
+Disallow: /sozinho
+Disallow: /redefinir-senha
+Disallow: /esqueci-senha
+
+Sitemap: https://www.cobradabola.com.br/sitemap.xml

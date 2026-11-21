@@ -10,8 +10,14 @@ JWT_SECRET=troque-isto-por-um-segredo-longo-e-aleatorio
 # Porta do servidor HTTP/WebSocket.
 PORT=8787
 
-# Origem do front-end (para CORS).
+# Origem do front-end (para CORS). Aceita varias, separadas por virgula.
 WEB_ORIGIN=http://localhost:5173
+
+# Dominio oficial do site (SEO). Quando definido, visitas de pagina que
+# chegam por outro endereco (*.up.railway.app, dominio sem www) recebem um
+# redirecionamento 301 para ele. So defina DEPOIS que o DNS do dominio
+# estiver funcionando -- antes disso, deixe vazio.
+# PUBLIC_URL=https://www.cobradabola.com.br
 
 # Caminho do arquivo SQLite (opcional; padrao: server/data/cobra.db).
 # DB_PATH=./data/cobra.db

@@ -3,18 +3,46 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no" />
-    <title>Quem é o Cobra da Bola?</title>
+    <title>Quem é o Cobra da Bola? – O jogo de quiz de futebol online</title>
     <meta
       name="description"
-      content="Quem é o Cobra da Bola? Um quiz de futebol multiplayer em tempo real: perguntas, Desafio das Carreiras, semifinal e final ate o campeao. Jogue com amigos ou sozinho."
+      content="Jogue Quem é o Cobra da Bola?, o quiz de futebol multiplayer em tempo real: perguntas de 5 níveis de dificuldade, Desafio das Carreiras, semifinal e final até o campeão. Jogue com amigos ou sozinho."
     />
+    <link rel="canonical" href="https://www.cobradabola.com.br/" />
     <meta name="theme-color" content="#0D0D0D" />
-    <meta property="og:title" content="Quem é o Cobra da Bola?" />
+
+    <meta property="og:type" content="website" />
+    <meta property="og:locale" content="pt_BR" />
+    <meta property="og:site_name" content="Quem é o Cobra da Bola?" />
+    <meta property="og:url" content="https://www.cobradabola.com.br/" />
+    <meta property="og:title" content="Quem é o Cobra da Bola? – O jogo" />
     <meta
       property="og:description"
-      content="Quiz de futebol multiplayer em tempo real: perguntas, Desafio das Carreiras, semifinal e final ate o campeao."
+      content="Quiz de futebol multiplayer em tempo real: perguntas, Desafio das Carreiras, semifinal e final até o campeão."
     />
-    <meta property="og:type" content="website" />
+    <meta property="og:image" content="https://www.cobradabola.com.br/og.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Quem é o Cobra da Bola? – O jogo" />
+    <meta name="twitter:image" content="https://www.cobradabola.com.br/og.png" />
+
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "WebApplication",
+        "name": "Quem é o Cobra da Bola? – O jogo",
+        "alternateName": ["Cobra da Bola", "Quem é o Cobra da Bola jogo"],
+        "url": "https://www.cobradabola.com.br/",
+        "image": "https://www.cobradabola.com.br/og.png",
+        "applicationCategory": "GameApplication",
+        "genre": "Quiz de futebol",
+        "inLanguage": "pt-BR",
+        "operatingSystem": "Any",
+        "description": "Quiz de futebol multiplayer em tempo real com perguntas, Desafio das Carreiras, semifinal e final."
+      }
+    </script>
+
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
@@ -23,7 +51,26 @@
     />
   </head>
   <body>
-    <div id="root"></div>
+    <!-- Static content for search engines and for the moment before the
+         JavaScript loads. React replaces everything inside #root on start. -->
+    <div id="root">
+      <main style="max-width: 720px; margin: 0 auto; padding: 48px 24px; color: #f4f4ea; background: #0d0d0d; font-family: Inter, system-ui, sans-serif">
+        <h1>Quem é o Cobra da Bola? – O jogo</h1>
+        <p>
+          Quiz de futebol multiplayer em tempo real. Duas equipes se enfrentam em perguntas de futebol, um contra um, em
+          cinco níveis de dificuldade: fácil, moderado, médio, difícil e impossível.
+        </p>
+        <h2>Como funciona</h2>
+        <ol>
+          <li><strong>Primeira etapa – Perguntas:</strong> quem chegar a 10 pontos se classifica.</li>
+          <li><strong>Desafio das Carreiras:</strong> os clubes da carreira de um jogador aparecem um por um; quem souber, chuta.</li>
+          <li><strong>Semifinal:</strong> confrontos X1.</li>
+          <li><strong>Final:</strong> quem chegar a 10 pontos é o Cobra da Bola.</li>
+        </ol>
+        <p>Jogue com amigos, com telão e apresentador, ou sozinho.</p>
+        <p><a href="/como-jogar" style="color: #d4f000">Veja como jogar</a> · <a href="/registrar" style="color: #d4f000">Crie sua conta</a></p>
+      </main>
+    </div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

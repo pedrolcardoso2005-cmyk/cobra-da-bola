@@ -13,6 +13,7 @@ import { rankingRouter } from "./ranking/routes.js";
 import { roomsRouter } from "./game/routes.js";
 import { soloRouter } from "./solo/routes.js";
 import { registerSocketHandlers } from "./realtime/socket.js";
+import { canonicalHostMiddleware } from "./http/canonicalHost.js";
 import { seedDatabase } from "./questions/seed.js";
 import { loadQuestionBank } from "./questions/bank/index.js";
 import { loadAiQuestionsConfig } from "./questions/ai/config.js";
@@ -61,8 +62,16 @@ if (aiQuestionsConfig.enabled) {
   setInterval(() => void runAndLog("intervalo de 6h"), 6 * 60 * 60 * 1000);
 }
 
+// WEB_ORIGIN may list several origins separated by commas (e.g. the official
+// domain and the *.up.railway.app address while both are in use).
+const webOrigins = (process.env.WEB_ORIGIN ?? "http://localhost:5173")
+  .split(",")
+  .map((o) => o.trim())
+  .filter(Boolean);
+
 const app = express();
-app.use(cors({ origin: process.env.WEB_ORIGIN ?? "http://localhost:5173", credentials: true }));
+app.use(canonicalHostMiddleware);
+app.use(cors({ origin: webOrigins, credentials: true }));
 app.use(express.json());
 
 app.get("/api/health", (_req, res) => res.json({ ok: true }));
@@ -95,7 +104,7 @@ app.use((err: any, _req: any, res: any, _next: any) => {
 const httpServer = createServer(app);
 const io = new Server(httpServer, {
   path: SOCKET_PATH,
-  cors: { origin: process.env.WEB_ORIGIN ?? "http://localhost:5173", credentials: true },
+  cors: { origin: webOrigins, credentials: true },
 });
 registerSocketHandlers(io as any);
 
