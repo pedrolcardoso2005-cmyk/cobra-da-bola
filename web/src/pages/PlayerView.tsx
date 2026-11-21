@@ -218,7 +218,7 @@ export default function PlayerView() {
                   placeholder="Digite sua resposta"
                   disabled={!!match.lastAnswer}
                 />
-                <button className="btn btn-primary" type="submit" disabled={!!match.lastAnswer}>Enviar</button>
+                <button className="btn btn-primary" type="submit" disabled={!!match.lastAnswer || !answer.trim()}>Enviar</button>
               </>
             )}
             {match.lastAnswer?.playerId === self.id && (
