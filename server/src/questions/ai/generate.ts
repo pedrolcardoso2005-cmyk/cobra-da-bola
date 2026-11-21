@@ -75,6 +75,7 @@ export interface GenerateBatchResult {
   candidates: GeneratedQuestionCandidate[];
   stopReason: string | null;
   usage: { inputTokens: number; outputTokens: number } | null;
+  diagnostic: string | null;
 }
 
 export async function generateQuestionBatch(params: GenerateBatchParams): Promise<GenerateBatchResult> {
@@ -104,10 +105,35 @@ Responda chamando a ferramenta "${TOOL_NAME}" com exatamente ${params.count} per
   });
 
   if (!result.toolInput || typeof result.toolInput !== "object") {
-    return { candidates: [], stopReason: result.stopReason, usage: result.usage };
+    return {
+      candidates: [],
+      stopReason: result.stopReason,
+      usage: result.usage,
+      diagnostic: `Anthropic nao chamou a ferramenta ${TOOL_NAME} (stop_reason=${result.stopReason ?? "ausente"}; continuacoes=${result.continuationCount})`,
+    };
   }
   const questions = (result.toolInput as { questions?: unknown }).questions;
-  if (!Array.isArray(questions)) return { candidates: [], stopReason: result.stopReason, usage: result.usage };
+  if (!Array.isArray(questions)) {
+    return {
+      candidates: [],
+      stopReason: result.stopReason,
+      usage: result.usage,
+      diagnostic: `${TOOL_NAME} foi chamada, mas o campo questions nao e um array`,
+    };
+  }
+  if (questions.length === 0) {
+    return {
+      candidates: [],
+      stopReason: result.stopReason,
+      usage: result.usage,
+      diagnostic: `${TOOL_NAME} foi chamada, mas retornou zero perguntas`,
+    };
+  }
 
-  return { candidates: questions as GeneratedQuestionCandidate[], stopReason: result.stopReason, usage: result.usage };
+  return {
+    candidates: questions as GeneratedQuestionCandidate[],
+    stopReason: result.stopReason,
+    usage: result.usage,
+    diagnostic: null,
+  };
 }
