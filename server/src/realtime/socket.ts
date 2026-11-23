@@ -41,6 +41,11 @@ export function registerSocketHandlers(io: Server<ClientToServerEvents, ServerTo
   });
 
   roomManager.on("update", (match: MatchState) => broadcastRoom(io, match));
+  roomManager.on("kicked", (code: string, playerId: string) => {
+    const roomName = `${code}:player:${playerId}`;
+    io.to(roomName).emit("room:kicked");
+    io.in(roomName).socketsLeave([code, roomName]);
+  });
 
   io.on("connection", (socket: AppSocket) => {
     socketOpened(socket.data.userId);
@@ -99,12 +104,8 @@ export function registerSocketHandlers(io: Server<ClientToServerEvents, ServerTo
           });
           socket.data.playerId = playerId;
           socket.join(`${room.match.code}:player:${playerId}`);
-          // The room's creator judges from their own player screen (no
-          // separate presenter tab required), so also subscribe them to
-          // the host-only broadcasts (the answer key) on this same socket.
-          if (room.match.hostUserId === socket.data.userId) {
-            socket.join(`${room.match.code}:host`);
-          }
+          // Sem apresentador: quem criou a sala e so mais um jogador e nunca
+          // recebe o gabarito. O servidor confere as respostas sozinho.
         }
         ack({ ok: true });
         broadcastRoom(io, roomManager.getRoom(room.match.code)!.match);
@@ -114,7 +115,10 @@ export function registerSocketHandlers(io: Server<ClientToServerEvents, ServerTo
     });
 
     socket.on("room:setTeams", (payload) => guardedHost(socket, () => roomManager.setTeams(socket.data.code!, payload.assignments)));
-    socket.on("room:start", () => guardedHost(socket, () => roomManager.startMatch(socket.data.code!)));
+    socket.on("room:start", () => guardedHost(socket, () => roomManager.startWithCountdown(socket.data.code!)));
+    socket.on("room:kick", (payload) =>
+      guardedHost(socket, () => roomManager.kickPlayer(socket.data.code!, String(payload?.playerId ?? ""), socket.data.userId)),
+    );
     socket.on("room:pause", () => guardedHost(socket, () => roomManager.pause(socket.data.code!)));
     socket.on("room:resume", () => guardedHost(socket, () => roomManager.resume(socket.data.code!)));
     socket.on("room:leave", () =>
@@ -216,7 +220,7 @@ function broadcastRoom(io: Server<ClientToServerEvents, ServerToClientEvents, Re
   io.to(match.code).emit("room:question", {
     question: question ? toPublicQuestion(question) : null,
     careerClubs: careerClubsRevealed(careerQuestion, match.career?.revealedClubCount ?? 0),
-    skippedAnswer: match.lastAnswer?.skipped && question ? question.correctAnswer : null,
+    revealedAnswer: room.revealedAnswer,
   });
 
   io.to(`${match.code}:host`).emit("host:answerKey", {

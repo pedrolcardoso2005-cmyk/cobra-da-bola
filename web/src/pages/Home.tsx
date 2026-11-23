@@ -107,7 +107,7 @@ export default function Home() {
             {creating ? "Criando sala..." : "Criar sala"}
           </button>
           <p style={{ color: "var(--giz-dim)", fontSize: "0.8rem" }}>
-            A partida comeca automaticamente assim que {targetCount} jogadores entrarem -- sem precisar de anfitriao.
+            Voce entra como jogador. Quando a turma chegar, aperte "Iniciar partida" na sala.
           </p>
         </section>
       </main>

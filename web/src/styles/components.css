@@ -240,3 +240,11 @@
   color: var(--giz);
   border-color: var(--giz);
 }
+
+/* Regra geral de contraste: campo de digitar tem fundo claro, entao o
+   texto e sempre escuro, nao importa a cor da caixa em volta. */
+input:not([type="checkbox"]):not([type="radio"]),
+select,
+textarea {
+  color: var(--escama);
+}

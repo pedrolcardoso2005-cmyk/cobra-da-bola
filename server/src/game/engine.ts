@@ -130,6 +130,7 @@ export function applyAction(input: MatchState, action: EngineAction): MatchState
 
     case "START_MATCH": {
       if (state.phase !== "lobby") throw new EngineError("Partida ja iniciada");
+      state.countdownEndsAt = null;
       const n = state.players.length;
       if (n < 2 || n > 12) throw new EngineError("Numero de participantes deve ser entre 2 e 12");
       const plan = planForParticipantCount(n as any);
@@ -272,7 +273,7 @@ export function applyAction(input: MatchState, action: EngineAction): MatchState
       // a wrong answer re-arms the buzzer for the next player without an
       // explicit "advance" step in between).
       state.lastAnswer = null;
-      if (state.phase === "phase1" || state.phase === "semifinal" || state.phase === "final") {
+      if (state.phase === "phase1" || state.phase === "semifinal" || state.phase === "final" || state.phase === "career") {
         const seconds = state.timer?.seconds ?? state.settings.answerSeconds;
         state.timer = { seconds, endsAt: action.now + seconds * 1000, remainingForActivePlayer: seconds };
       }
@@ -302,6 +303,20 @@ export function applyAction(input: MatchState, action: EngineAction): MatchState
       const other = eligible.find((id) => id !== action.playerId);
       const otherAgreedOrGone = !other || buzz.skipRequestedBy.includes(other) || !findPlayer(state, other).connected;
       if (otherAgreedOrGone) resolveSkip(state);
+      return state;
+    }
+
+    case "SET_COUNTDOWN": {
+      if (state.phase !== "lobby") return state;
+      state.countdownEndsAt = action.endsAt;
+      return state;
+    }
+
+    case "AUTO_SKIP": {
+      if (state.phase !== "phase1" && state.phase !== "semifinal" && state.phase !== "final") return state;
+      const buzz = activeBuzz(state);
+      if (!buzz || buzz.firstPlayerId || state.lastAnswer) return state;
+      resolveSkip(state);
       return state;
     }
 
@@ -483,6 +498,7 @@ function applyJudgement(state: MatchState, playerId: string, correct: boolean, t
 
   if (state.phase === "career") {
     const c = state.career!;
+    if (state.timer) state.timer.endsAt = null;
     if (correct) {
       player.qualified = true;
       player.correctAnswers += 1;

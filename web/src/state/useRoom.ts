@@ -14,10 +14,11 @@ export function useRoom(code: string | undefined, role: RoomRole) {
   const [match, setMatch] = useState<MatchState | null>(null);
   const [question, setQuestion] = useState<PublicQuestion | null>(null);
   const [careerClubs, setCareerClubs] = useState<string[] | null>(null);
-  const [skippedAnswer, setSkippedAnswer] = useState<string | null>(null);
+  const [revealedAnswer, setRevealedAnswer] = useState<string | null>(null);
   const [answerKey, setAnswerKey] = useState<{ question: HostQuestionView | null; careerPlayerName: string | null } | null>(null);
   const [playerView, setPlayerView] = useState<PlayerView | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
   const [joined, setJoined] = useState(false);
   const socketRef = useRef(getSocket());
 
@@ -28,8 +29,8 @@ export function useRoom(code: string | undefined, role: RoomRole) {
     function onState(payload: { match: MatchState }) {
       setMatch(payload.match);
     }
-    function onQuestion(payload: { question: PublicQuestion | null; careerClubs: string[] | null; skippedAnswer?: string | null }) {
-      setSkippedAnswer(payload.skippedAnswer ?? null);
+    function onQuestion(payload: { question: PublicQuestion | null; careerClubs: string[] | null; revealedAnswer?: string | null }) {
+      setRevealedAnswer(payload.revealedAnswer ?? null);
       setQuestion(payload.question);
       setCareerClubs(payload.careerClubs);
     }
@@ -39,8 +40,14 @@ export function useRoom(code: string | undefined, role: RoomRole) {
     function onPlayerView(payload: PlayerView) {
       setPlayerView(payload);
     }
+    // Erro de uma acao (ex.: apertar duas vezes): aviso rapido que some
+    // sozinho. Nunca derruba a tela do jogo.
     function onError(payload: { message: string }) {
-      setError(payload.message);
+      setNotice(payload.message);
+      window.setTimeout(() => setNotice((cur) => (cur === payload.message ? null : cur)), 4000);
+    }
+    function onKicked() {
+      setError("Voce foi removido da sala pelo anfitriao.");
     }
 
     socket.on("room:state", onState);
@@ -48,6 +55,7 @@ export function useRoom(code: string | undefined, role: RoomRole) {
     socket.on("host:answerKey", onAnswerKey);
     socket.on("player:view", onPlayerView);
     socket.on("error", onError);
+    socket.on("room:kicked", onKicked);
 
     socket.emit("room:join", { code, role }, (res) => {
       if (res.ok) setJoined(true);
@@ -60,13 +68,14 @@ export function useRoom(code: string | undefined, role: RoomRole) {
       socket.off("host:answerKey", onAnswerKey);
       socket.off("player:view", onPlayerView);
       socket.off("error", onError);
+      socket.off("room:kicked", onKicked);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [code, role]);
 
   const actions = useActions(socketRef.current, code);
 
-  return { match, question, careerClubs, skippedAnswer, answerKey, playerView, error, joined, actions };
+  return { match, question, careerClubs, revealedAnswer, answerKey, playerView, error, notice, joined, actions };
 }
 
 function useActions(socket: ReturnType<typeof getSocket>, code: string | undefined) {
@@ -77,6 +86,7 @@ function useActions(socket: ReturnType<typeof getSocket>, code: string | undefin
   const pause = useCallback(() => socket.emit("room:pause"), [socket]);
   const resume = useCallback(() => socket.emit("room:resume"), [socket]);
   const leaveRoom = useCallback(() => socket.emit("room:leave"), [socket]);
+  const kickPlayer = useCallback((playerId: string) => socket.emit("room:kick", { playerId }), [socket]);
   const releaseQuestion = useCallback((questionId?: string) => socket.emit("host:releaseQuestion", { questionId }), [socket]);
   const armButtons = useCallback(() => socket.emit("host:armButtons"), [socket]);
   const revealNextClub = useCallback(() => socket.emit("host:revealNextClub"), [socket]);
@@ -97,6 +107,7 @@ function useActions(socket: ReturnType<typeof getSocket>, code: string | undefin
     pause,
     resume,
     leaveRoom,
+    kickPlayer,
     releaseQuestion,
     armButtons,
     revealNextClub,

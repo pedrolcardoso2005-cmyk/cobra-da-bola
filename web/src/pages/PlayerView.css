@@ -58,6 +58,8 @@
   border-radius: var(--radius-sm);
   border: 2px solid var(--giz);
   background: var(--giz);
+  /* fundo claro: texto escuro */
+  color: var(--escama);
 }
 
 .player-answer__timer {
@@ -104,4 +106,68 @@
 .player-view__host-panel {
   margin: 0 1.5rem 1.5rem;
   padding: 1.25rem;
+}
+
+/* Resultado da rodada: fundo escuro, texto sempre claro. */
+.player-result {
+  width: 100%;
+  max-width: 420px;
+  background: #161616;
+  color: var(--giz);
+  border: 2px solid var(--giz);
+  border-radius: var(--radius-md);
+  padding: 0.9rem 1.1rem;
+  text-align: center;
+}
+.player-result.is-correct {
+  border-color: var(--gramado);
+}
+.player-result.is-wrong {
+  border-color: var(--bote);
+}
+.player-result__answer {
+  color: var(--lima);
+}
+
+.lobby-countdown {
+  font-size: clamp(5rem, 22vw, 10rem);
+  color: var(--lima);
+  line-height: 1;
+  margin: 0.5rem 0;
+}
+.player-lobby-list li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+.lobby-kick {
+  font-size: 0.75rem;
+  padding: 0.3em 0.8em;
+}
+
+.lobby-teams {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+  width: 100%;
+  max-width: 720px;
+}
+.lobby-team {
+  background: #161616;
+  color: var(--giz);
+  border: 2px solid var(--giz);
+  border-radius: var(--radius-md);
+  padding: 0.8rem 1rem;
+}
+.lobby-team--a h2 {
+  color: var(--lima);
+}
+.lobby-team--b h2 {
+  color: #ff8a1f;
+}
+@media (max-width: 600px) {
+  .lobby-teams {
+    grid-template-columns: 1fr;
+  }
 }

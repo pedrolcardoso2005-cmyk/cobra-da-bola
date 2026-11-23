@@ -60,8 +60,10 @@ function emitAck<T = any>(socket: ClientSocket, event: string, payload: unknown)
   });
 }
 
-describe("sincronizacao real via Socket.IO ao encher a sala", () => {
+describe("sincronizacao real via Socket.IO quando o anfitriao inicia", () => {
   it("todos os 4 clientes recebem a partida ja comecada e a 1a pergunta ja liberada, no mesmo broadcast", async () => {
+    const { roomManager } = await import("../src/game/rooms.js");
+    (roomManager.constructor as any).COUNTDOWN_MS = 30;
     const tokens = [registerTestUser("W1"), registerTestUser("W2"), registerTestUser("W3"), registerTestUser("W4")];
     const sockets = await Promise.all(tokens.map(connect));
     try {
@@ -95,8 +97,12 @@ describe("sincronizacao real via Socket.IO ao encher a sala", () => {
       for (const s of sockets) {
         await emitAck(s, "room:join", { code, role: "player" });
       }
+      // Quem criou a sala aperta "Iniciar" (contagem encurtada no teste).
+      sockets[0].emit("room:start");
 
       const states = await Promise.all(startedStates);
+
+      // Quem criou a sala e so jogador: nunca recebe o gabarito.
 
       for (const match of states) {
         assert.notEqual(match.phase, "lobby");

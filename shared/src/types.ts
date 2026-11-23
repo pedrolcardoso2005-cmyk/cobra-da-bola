@@ -245,6 +245,8 @@ export interface MatchState {
   presenterCue: PresenterCue;
   history: HistoryEntry[];
   winnerUserId: string | null;
+  /** Contagem regressiva antes de comecar (anfitriao apertou Iniciar). */
+  countdownEndsAt?: number | null;
   runnerUpUserId: string | null;
   paused: boolean;
 }

@@ -16,7 +16,7 @@ import "./ScreenView.css";
 
 export default function ScreenView() {
   const { code } = useParams();
-  const { match, question, careerClubs, skippedAnswer, error } = useRoom(code, "screen");
+  const { match, question, careerClubs, revealedAnswer, error } = useRoom(code, "screen");
   const [countdownN, setCountdownN] = useState<3 | 2 | 1 | null>(null);
   const lastHistoryLen = useRef(0);
   const playedChampion = useRef(false);
@@ -130,8 +130,8 @@ export default function ScreenView() {
         <div className={`screen-banner hazard-stripes ${match.lastAnswer.skipped ? "" : match.lastAnswer.correct ? "is-correct" : "is-wrong"}`}>
           <span className="font-display">
             {match.lastAnswer.skipped
-              ? `Pulada -- ninguem pontuou${skippedAnswer ? `. Resposta: ${skippedAnswer}` : ""}`
-              : `${nameOf(match.lastAnswer.playerId!)}: ${match.lastAnswer.timedOut ? "tempo esgotado" : match.lastAnswer.correct ? "ACERTOU!" : "ERROU!"}`}
+              ? `Pulada -- ninguem pontuou${revealedAnswer ? `. Resposta: ${revealedAnswer}` : ""}`
+              : `${nameOf(match.lastAnswer.playerId!)}: ${match.lastAnswer.timedOut ? "tempo esgotado" : match.lastAnswer.correct ? "ACERTOU!" : "ERROU!"}${revealedAnswer ? ` -- Resposta: ${revealedAnswer}` : ""}`}
           </span>
         </div>
       )}

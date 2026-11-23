@@ -1,6 +1,6 @@
 import { EventEmitter } from "node:events";
 import { nanoid } from "nanoid";
-import { generateRoomCode, type CareerQuestion, type MatchSettings, type MatchState, type Question, type TeamKey } from "@cobra/shared";
+import { answersMatch, generateRoomCode, REVEAL_WORD_MS, type CareerQuestion, type MatchSettings, type MatchState, type Question, type TeamKey } from "@cobra/shared";
 import { applyAction, EngineError } from "./engine.js";
 import { createInitialMatch } from "./match.js";
 import type { EngineAction } from "./actions.js";
@@ -14,6 +14,10 @@ export class RoomRuntime {
   careerCache = new Map<string, CareerQuestion>();
   usedCareerQuestionIds: string[] = [];
   pendingTimeout: NodeJS.Timeout | null = null;
+  /** Proximo passo automatico do jogo (proxima pergunta, proximo clube...). */
+  flowTimeout: NodeJS.Timeout | null = null;
+  /** Resposta certa mostrada a todos depois que a rodada termina. */
+  revealedAnswer: string | null = null;
   playerIdByUserId = new Map<string, string>();
 
   constructor(match: MatchState) {
@@ -105,7 +109,15 @@ class RoomManager extends EventEmitter {
         wrongAnswers: 0,
       },
     });
-    if (room.match.phase === "lobby" && room.match.players.length === room.match.settings.targetCount) {
+    // Ja entra numa equipe (a menor); o anfitriao pode trocar depois.
+    if (room.match.phase === "lobby") {
+      const a = room.match.players.filter((p) => p.teamId === "A").length;
+      const b = room.match.players.filter((p) => p.teamId === "B").length;
+      this.dispatch(room, { type: "SET_TEAMS", assignments: { [playerId]: a <= b ? "A" : "B" } });
+    }
+    // Partida casual: quem criou a sala aperta "Iniciar". Ranqueada (fila
+    // automatica, sem anfitriao de verdade): comeca sozinha ao encher.
+    if (room.match.phase === "lobby" && room.match.settings.kind === "ranked" && room.match.players.length === room.match.settings.targetCount) {
       this.autoStart(room);
     }
     return { playerId, reconnected: false };
@@ -131,6 +143,196 @@ class RoomManager extends EventEmitter {
     if (room.match.phase === "phase1" || room.match.phase === "semifinal" || room.match.phase === "final") {
       this.armButtons(room.match.code);
     }
+    this.afterQuestionOpened(room);
+  }
+
+  // ---------------------------------------------------------------------
+  // Fluxo automatico (sem apresentador): o servidor confere as respostas,
+  // revela os clubes da carreira, encerra pergunta sem resposta e libera a
+  // proxima sozinho. Ninguem precisa "julgar" nada.
+  // ---------------------------------------------------------------------
+
+  static RESULT_MS = 3500;
+  static CLUB_REVEAL_MS = 7000;
+  static CAREER_LAST_CLUB_MS = 15000;
+
+  private setFlow(room: RoomRuntime, ms: number, fn: () => void): void {
+    if (room.flowTimeout) clearTimeout(room.flowTimeout);
+    room.flowTimeout = setTimeout(() => {
+      room.flowTimeout = null;
+      if (!this.rooms.has(room.match.code)) return;
+      try {
+        fn();
+      } catch (err) {
+        // eslint-disable-next-line no-console
+        console.error("Fluxo automatico da sala falhou", err);
+      }
+    }, ms);
+    room.flowTimeout.unref?.();
+  }
+
+  private clearFlow(room: RoomRuntime): void {
+    if (room.flowTimeout) {
+      clearTimeout(room.flowTimeout);
+      room.flowTimeout = null;
+    }
+  }
+
+  private setRevealed(room: RoomRuntime, answer: string | null): void {
+    room.revealedAnswer = answer;
+    this.emit("update", room.match);
+  }
+
+  private currentQuestion(room: RoomRuntime): Question | null {
+    const m = room.match;
+    const id = m.phase === "phase1" ? m.phase1?.currentQuestionId : m.phase === "semifinal" || m.phase === "final" ? m.bracketRound?.currentQuestionId : null;
+    return id ? room.questionCache.get(id) ?? null : null;
+  }
+
+  private currentCareer(room: RoomRuntime): CareerQuestion | null {
+    const id = room.match.phase === "career" ? room.match.career?.careerQuestionId : null;
+    return id ? room.careerCache.get(id) ?? null : null;
+  }
+
+  /** Abre a proxima pergunta/carreira da fase em que a partida esta. */
+  private openNext(room: RoomRuntime): void {
+    const m = room.match;
+    if (m.phase === "champion" || m.phase === "lobby") return;
+    room.revealedAnswer = null;
+    if (m.phase === "phase1" && m.phase1?.currentQuestionId) this.dispatch(room, { type: "ADVANCE_PHASE1_QUESTION" });
+    if ((m.phase === "semifinal" || m.phase === "final") && m.bracketRound?.currentQuestionId) {
+      this.dispatch(room, { type: "ADVANCE_BRACKET_QUESTION" });
+    }
+    if (room.match.phase === "career" && room.match.career?.careerQuestionId) this.dispatch(room, { type: "END_CAREER_ROUND" });
+    try {
+      this.releaseQuestion(room.match.code);
+    } catch (err) {
+      // Acabaram as perguntas: encerra a partida em vez de travar.
+      // eslint-disable-next-line no-console
+      console.error("Sem pergunta para liberar, encerrando a partida", err);
+      this.dispatch(room, { type: "END_MATCH_FORCE", now: Date.now() });
+      return;
+    }
+    if (room.match.phase !== "career") this.armButtons(room.match.code);
+    this.afterQuestionOpened(room);
+  }
+
+  /** Agenda o que acontece se ninguem apertar o botao. */
+  private afterQuestionOpened(room: RoomRuntime): void {
+    const m = room.match;
+    if (m.phase === "career") {
+      this.scheduleClubReveal(room);
+      return;
+    }
+    if (m.phase !== "phase1" && m.phase !== "semifinal" && m.phase !== "final") return;
+    const q = this.currentQuestion(room);
+    const words = q ? q.prompt.split(/\s+/).filter(Boolean).length : 0;
+    const questionId = q?.id ?? null;
+    this.setFlow(room, words * REVEAL_WORD_MS + m.settings.answerSeconds * 1000, () => {
+      const fresh = room.match;
+      const buzz = currentBuzzOf(fresh);
+      if (this.currentQuestion(room)?.id !== questionId || !buzz || buzz.firstPlayerId || fresh.lastAnswer) return;
+      this.dispatch(room, { type: "AUTO_SKIP" });
+      this.setRevealed(room, q?.correctAnswer ?? null);
+      this.setFlow(room, RoomManager.RESULT_MS, () => this.openNext(room));
+    });
+  }
+
+  /** Revela o proximo clube a cada poucos segundos; sem acerto depois do
+   * ultimo clube, mostra quem era e passa para a proxima carreira. */
+  private scheduleClubReveal(room: RoomRuntime): void {
+    const careerId = room.match.career?.careerQuestionId ?? null;
+    if (!careerId) return;
+    const c = room.careerCache.get(careerId);
+    const allRevealed = !!c && (room.match.career?.revealedClubCount ?? 0) >= c.clubs.length;
+    this.setFlow(room, allRevealed ? RoomManager.CAREER_LAST_CLUB_MS : RoomManager.CLUB_REVEAL_MS, () => {
+      const fresh = room.match;
+      if (fresh.phase !== "career" || fresh.career?.careerQuestionId !== careerId) return;
+      if (fresh.career.buzz.firstPlayerId) {
+        // Alguem esta respondendo: espera o resultado.
+        this.scheduleClubReveal(room);
+        return;
+      }
+      if (!allRevealed) {
+        this.dispatch(room, { type: "REVEAL_NEXT_CLUB" });
+        this.scheduleClubReveal(room);
+        return;
+      }
+      this.setRevealed(room, c?.playerName ?? null);
+      this.setFlow(room, RoomManager.RESULT_MS, () => this.openNext(room));
+    });
+  }
+
+  /** Depois de uma resposta conferida (ou tempo esgotado). */
+  private afterJudged(room: RoomRuntime, revealed: string | null): void {
+    const m = room.match;
+    if (m.phase === "champion") {
+      this.clearFlow(room);
+      this.setRevealed(room, revealed);
+      return;
+    }
+    if (m.phase === "career" && m.career?.careerQuestionId && !m.lastAnswer?.correct) {
+      // Errou na carreira: os outros continuam tentando com os mesmos clubes.
+      if (m.career.buzz.armed) {
+        this.scheduleClubReveal(room);
+      } else {
+        this.setRevealed(room, this.currentCareer(room)?.playerName ?? null);
+        this.setFlow(room, RoomManager.RESULT_MS, () => this.openNext(room));
+      }
+      return;
+    }
+    this.setRevealed(room, revealed);
+    this.setFlow(room, RoomManager.RESULT_MS, () => this.openNext(room));
+  }
+
+  /** Confere a resposta digitada contra o gabarito e aplica o resultado. */
+  private autoJudge(room: RoomRuntime, playerId: string, answer: string): void {
+    const q = this.currentQuestion(room);
+    const c = this.currentCareer(room);
+    let correct = false;
+    let revealed: string | null = null;
+    if (room.match.phase === "career" && c) {
+      correct = answersMatch(answer, c.playerName, c.acceptedAnswers);
+      revealed = c.playerName;
+    } else if (q) {
+      correct = answersMatch(answer, q.correctAnswer, q.acceptedAnswers);
+      revealed = q.correctAnswer;
+    }
+    this.dispatch(room, { type: "HOST_JUDGE", playerId, correct, now: Date.now() });
+    this.afterJudged(room, revealed);
+  }
+
+  static COUNTDOWN_MS = 10_000;
+
+  /** Anfitriao apertou Iniciar: contagem de 10 s para todos e comeca. */
+  startWithCountdown(code: string): void {
+    const room = this.mustGet(code);
+    const m = room.match;
+    if (m.phase !== "lobby") throw new EngineError("Partida ja iniciada");
+    if (m.countdownEndsAt) return;
+    if (m.players.length < 2) throw new EngineError("Precisa de pelo menos 2 jogadores para comecar");
+    const problem = teamsProblem(m);
+    if (problem) throw new EngineError(problem);
+    this.dispatch(room, { type: "SET_COUNTDOWN", endsAt: Date.now() + RoomManager.COUNTDOWN_MS });
+    this.setFlow(room, RoomManager.COUNTDOWN_MS, () => {
+      if (room.match.phase !== "lobby") return;
+      if (room.match.players.length < 2) {
+        this.dispatch(room, { type: "SET_COUNTDOWN", endsAt: null });
+        return;
+      }
+      this.autoStart(room);
+    });
+  }
+
+  /** Anfitriao remove alguem da sala antes de comecar. */
+  kickPlayer(code: string, playerId: string, byUserId: string): void {
+    const room = this.mustGet(code);
+    if (room.match.phase !== "lobby") throw new EngineError("So da para remover jogadores antes de a partida comecar");
+    const target = room.match.players.find((p) => p.id === playerId);
+    if (!target) return;
+    if (target.userId === byUserId) throw new EngineError("Voce nao pode remover a si mesmo");
+    this.leavePlayer(code, playerId);
+    this.emit("kicked", room.match.code, playerId);
   }
 
   setConnected(code: string, playerId: string, connected: boolean): void {
@@ -148,6 +350,10 @@ class RoomManager extends EventEmitter {
         room.playerIdByUserId.delete(userId);
         break;
       }
+    }
+    if (room.match.countdownEndsAt && room.match.players.length < 2) {
+      this.clearFlow(room);
+      this.dispatch(room, { type: "SET_COUNTDOWN", endsAt: null });
     }
   }
 
@@ -230,14 +436,17 @@ class RoomManager extends EventEmitter {
       : 0;
     this.dispatch(room, { type: "PLAYER_BUZZ", playerId, now: Date.now(), totalWords });
     const buzz = currentBuzzOf(room.match);
-    if (buzz?.firstPlayerId === playerId && room.match.timer && (room.match.phase === "phase1" || room.match.phase === "semifinal" || room.match.phase === "final")) {
+    if (buzz?.firstPlayerId === playerId && room.match.timer) {
       this.clearPendingTimeout(room);
       const seconds = room.match.timer.seconds;
+      const revealed = room.match.phase === "career" ? this.currentCareer(room)?.playerName ?? null : this.currentQuestion(room)?.correctAnswer ?? null;
       room.pendingTimeout = setTimeout(() => {
+        room.pendingTimeout = null;
         const fresh = room.match;
         const b = currentBuzzOf(fresh);
-        if (b?.firstPlayerId === playerId && fresh.lastAnswer === null) {
+        if (b?.firstPlayerId === playerId && (fresh.lastAnswer === null || fresh.lastAnswer.playerId !== playerId || fresh.lastAnswer.pointsAwardedTo !== null)) {
           this.dispatch(room, { type: "TIMEOUT", now: Date.now() });
+          this.afterJudged(room, revealed);
         }
       }, seconds * 1000 + 150);
     }
@@ -247,11 +456,16 @@ class RoomManager extends EventEmitter {
     const room = this.mustGet(code);
     this.clearPendingTimeout(room);
     this.dispatch(room, { type: "SUBMIT_ANSWER", playerId, answer });
+    this.autoJudge(room, playerId, answer);
   }
 
   requestSkip(code: string, playerId: string): void {
     const room = this.mustGet(code);
     this.dispatch(room, { type: "REQUEST_SKIP", playerId });
+    if (room.match.lastAnswer?.skipped) {
+      this.setRevealed(room, this.currentQuestion(room)?.correctAnswer ?? null);
+      this.setFlow(room, RoomManager.RESULT_MS, () => this.openNext(room));
+    }
   }
 
   hostJudge(code: string, playerId: string, correct: boolean): void {
@@ -259,6 +473,7 @@ class RoomManager extends EventEmitter {
     this.snapshot(room);
     this.clearPendingTimeout(room);
     this.dispatch(room, { type: "HOST_JUDGE", playerId, correct, now: Date.now() });
+    this.afterJudged(room, this.currentQuestion(room)?.correctAnswer ?? this.currentCareer(room)?.playerName ?? null);
   }
 
   advance(code: string): void {
@@ -309,6 +524,19 @@ class RoomManager extends EventEmitter {
     if (!room) throw new EngineError("Sala nao encontrada");
     return room;
   }
+}
+
+/** Com 4+ jogadores as equipes precisam ficar equilibradas (5x5, 4x4, 3x2...). */
+export function teamsProblem(match: MatchState): string | null {
+  const n = match.players.length;
+  if (n < 4) return null;
+  const a = match.players.filter((p) => p.teamId === "A").length;
+  const b = match.players.filter((p) => p.teamId === "B").length;
+  const max = Math.ceil(n / 2);
+  if (a > max || b > max) {
+    return `Equipes desequilibradas (${a} x ${b}). Com ${n} jogadores, deixe ${max} x ${n - max}.`;
+  }
+  return null;
 }
 
 function currentBuzzOf(match: MatchState) {

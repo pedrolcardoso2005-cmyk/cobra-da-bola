@@ -4,7 +4,6 @@ import { useRoom } from "../state/useRoom";
 import { useAuth } from "../state/AuthContext";
 import { PlayerButton } from "../components/PlayerButton";
 import "../components/CareerBoard.css";
-import { BracketControls, CareerControls, Phase1Controls } from "../components/HostControls";
 import { sfx } from "../sound/sfx";
 import { REVEAL_WORD_MS } from "@cobra/shared";
 import "./PlayerView.css";
@@ -13,7 +12,7 @@ export default function PlayerView() {
   const { code } = useParams();
   const { user } = useAuth();
   const navigate = useNavigate();
-  const { match, playerView, question, careerClubs, skippedAnswer, answerKey, error, actions } = useRoom(code, "player");
+  const { match, playerView, careerClubs, revealedAnswer, error, notice, actions } = useRoom(code, "player");
   const [answer, setAnswer] = useState("");
   const prevButtonState = useRef<string | null>(null);
   const prevLastAnswerId = useRef<string | null>(null);
@@ -83,6 +82,20 @@ export default function PlayerView() {
     ? match?.players.find((p) => p.id === otherSkipRequesterId)?.displayName
     : undefined;
 
+  // Cronometro local: o servidor manda so o horario em que o tempo acaba,
+  // e a tela conta os segundos sozinha.
+  const timerEndsAt = match?.timer?.endsAt ?? null;
+  const countdownEndsAt = match?.phase === "lobby" ? match?.countdownEndsAt ?? null : null;
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    if (!timerEndsAt && !countdownEndsAt) return;
+    setNow(Date.now());
+    const id = setInterval(() => setNow(Date.now()), 250);
+    return () => clearInterval(id);
+  }, [timerEndsAt, countdownEndsAt]);
+  const countdownLeft = countdownEndsAt ? Math.max(0, Math.ceil((countdownEndsAt - now) / 1000)) : null;
+  const secondsLeft = timerEndsAt ? Math.max(0, Math.ceil((timerEndsAt - now) / 1000)) : null;
+
   useEffect(() => {
     const st = playerView?.myButtonState;
     if (st && st !== prevButtonState.current) {
@@ -114,18 +127,77 @@ export default function PlayerView() {
 
   if (match.phase === "lobby") {
     const target = match.settings.targetCount;
+    const isCreator = match.hostUserId === user?.id;
+    const canStart = match.players.length >= 2 && !countdownLeft;
+    const lobbyRow = (p: (typeof match.players)[number], team: "A" | "B" | null) => (
+      <li key={p.id} className={p.connected ? "" : "is-offline"}>
+        <span>
+          {p.displayName}
+          {p.userId === match.hostUserId ? " (criou a sala)" : ""}
+        </span>
+        {isCreator && (
+          <span className="row" style={{ gap: 6 }}>
+            {team && (
+              <button type="button" className="btn btn-ghost lobby-kick" onClick={() => actions.setTeams({ [p.id]: team === "A" ? "B" : "A" })}>
+                Mudar p/ {team === "A" ? "B" : "A"}
+              </button>
+            )}
+            {p.userId !== user?.id && (
+              <button type="button" className="btn btn-ghost lobby-kick" onClick={() => actions.kickPlayer(p.id)}>
+                Remover
+              </button>
+            )}
+          </span>
+        )}
+      </li>
+    );
+    if (countdownLeft != null) {
+      return (
+        <div className="center-page">
+          <h1 className="font-display brand-title">Sala {match.code}</h1>
+          <p>A partida vai comecar!</p>
+          <p className="font-score lobby-countdown">{countdownLeft}</p>
+          <p>{match.players.map((p) => p.displayName).join(" - ")}</p>
+        </div>
+      );
+    }
     return (
       <div className="center-page">
         <h1 className="font-display brand-title">Sala {match.code}</h1>
-        <p>Ola, {self.displayName}! A partida comeca automaticamente assim que a sala encher.</p>
+        <p>Passe o codigo <strong>{match.code}</strong> para seus amigos entrarem.</p>
         <p className="font-display" style={{ color: "var(--lima)", fontSize: "1.6rem" }}>
-          {match.players.length}/{target} jogadores
+          {match.players.length} de {target} jogadores
         </p>
-        <ul className="player-lobby-list">
-          {match.players.map((p) => (
-            <li key={p.id} className={p.connected ? "" : "is-offline"}>{p.displayName}{p.teamId ? ` - Equipe ${p.teamId}` : ""}</li>
-          ))}
-        </ul>
+        {match.players.length >= 4 ? (
+          <div className="lobby-teams">
+            {(["A", "B"] as const).map((t) => {
+              const members = match.players.filter((p) => p.teamId === t);
+              return (
+                <section key={t} className={`lobby-team lobby-team--${t.toLowerCase()}`}>
+                  <h2 className="font-display">Equipe {t} ({members.length})</h2>
+                  <ul className="player-lobby-list">
+                    {members.map((p) => lobbyRow(p, t))}
+                  </ul>
+                </section>
+              );
+            })}
+          </div>
+        ) : (
+          <>
+            <ul className="player-lobby-list">{match.players.map((p) => lobbyRow(p, null))}</ul>
+            <p className="player-view__note">
+              {match.players.length === 2 ? "Com 2 jogadores: duelo 1 x 1 direto na final." : match.players.length === 3 ? "Com 3 jogadores: comeca no Desafio das Carreiras." : "Com 4 ou mais, o jogo e em duas equipes."}
+            </p>
+          </>
+        )}
+        {notice && <p className="error-text">{notice}</p>}
+        {isCreator ? (
+          <button className="btn btn-primary" disabled={!canStart} onClick={actions.start}>
+            {match.players.length < 2 ? "Esperando jogadores..." : "Iniciar partida"}
+          </button>
+        ) : (
+          <p className="player-view__note">Esperando quem criou a sala iniciar a partida...</p>
+        )}
         <button
           className="btn btn-ghost"
           onClick={() => {
@@ -194,12 +266,7 @@ export default function PlayerView() {
           </div>
         )}
 
-        {match.lastAnswer?.skipped && (
-          <p className="player-view__note">
-            Pergunta pulada de comum acordo -- ninguem pontuou.
-            {skippedAnswer && <> Resposta: <strong style={{ color: "var(--lima)" }}>{skippedAnswer}</strong></>}
-          </p>
-        )}
+
 
         {playerView.myButtonState === "armed" && !buzz?.firstPlayerId && (
           <div className="player-skip">
@@ -247,9 +314,9 @@ export default function PlayerView() {
               actions.submitAnswer(currentItemId, answer.trim());
             }}
           >
-            {playerView.myTimerSecondsLeft != null && (
-              <div className={`player-answer__timer ${playerView.myTimerSecondsLeft <= 3 ? "is-urgent" : ""}`}>
-                {playerView.myTimerSecondsLeft}s
+            {secondsLeft != null && (
+              <div className={`player-answer__timer ${secondsLeft <= 5 ? "is-urgent" : ""}`}>
+                {secondsLeft}s
               </div>
             )}
             {playerView.currentQuestion?.choices ? (
@@ -273,26 +340,20 @@ export default function PlayerView() {
               </>
             )}
             {match.lastAnswer?.playerId === self.id && (
-              <p className="player-answer__sent">Resposta enviada: {match.lastAnswer.submittedAnswer}. Aguardando confirmacao do apresentador...</p>
+              <p className="player-answer__sent">Resposta enviada: {match.lastAnswer.submittedAnswer}. Conferindo...</p>
             )}
           </form>
         )}
 
-        {match.lastAnswer && match.lastAnswer.playerId !== self.id && (
-          <p className="player-view__note">Aguardando resultado...</p>
+        {playerView.myButtonState === "buzzed_other" && secondsLeft != null && !match.lastAnswer && (
+          <p className="player-view__note">
+            {buzzedOtherName(match, "buzzed_other") ?? "Outro jogador"} esta respondendo... <strong>{secondsLeft}s</strong>
+          </p>
         )}
-      </main>
 
-      {self.userId === match.hostUserId && (
-        <section className="player-view__host-panel panel-dark sticker">
-          <h2 className="font-display" style={{ color: "var(--lima)" }}>Voce criou esta sala -- controles do apresentador</h2>
-          {match.phase === "phase1" && <Phase1Controls match={match} actions={actions} answerKey={answerKey} question={question} />}
-          {match.phase === "career" && <CareerControls match={match} actions={actions} answerKey={answerKey} careerClubs={careerClubs} />}
-          {(match.phase === "semifinal" || match.phase === "final") && (
-            <BracketControls match={match} actions={actions} answerKey={answerKey} question={question} />
-          )}
-        </section>
-      )}
+        <RoundResult match={match} selfId={self.id} revealedAnswer={revealedAnswer} />
+        {notice && <p className="error-text">{notice}</p>}
+      </main>
     </div>
   );
 }
@@ -312,4 +373,27 @@ function buzzedOtherName(match: any, state: string): string | undefined {
   const buzz = match.phase1?.buzz ?? match.career?.buzz ?? match.bracketRound?.buzz;
   const id = buzz?.firstPlayerId;
   return match.players.find((p: any) => p.id === id)?.displayName;
+}
+
+/** Resultado da rodada para todos: quem acertou/errou e a resposta certa. */
+function RoundResult({ match, selfId, revealedAnswer }: { match: any; selfId: string; revealedAnswer: string | null }) {
+  const la = match.lastAnswer;
+  if (!la) return null;
+  const judged = la.skipped || la.pointsAwardedTo !== null;
+  if (!judged) return null;
+  const name = la.playerId === selfId ? "Voce" : match.players.find((p: any) => p.id === la.playerId)?.displayName ?? "Jogador";
+  const verb = la.playerId === selfId ? { ok: "acertou!", bad: "errou.", late: "nao respondeu a tempo." } : { ok: "acertou!", bad: "errou.", late: "nao respondeu a tempo." };
+  const text = la.skipped ? "Ninguem pontuou nesta pergunta." : `${name} ${la.timedOut ? verb.late : la.correct ? verb.ok : verb.bad}`;
+  const cls = la.skipped ? "" : la.correct ? "is-correct" : "is-wrong";
+  return (
+    <div className={`player-result ${cls}`}>
+      <strong>{text}</strong>
+      {revealedAnswer && (
+        <span>
+          {" "}Resposta: <strong className="player-result__answer">{revealedAnswer}</strong>
+        </span>
+      )}
+      {!revealedAnswer && match.phase === "career" && !la.correct && <span> Os outros ainda podem tentar.</span>}
+    </div>
+  );
 }

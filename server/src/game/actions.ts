@@ -13,6 +13,9 @@ export type EngineAction =
   | { type: "REVEAL_NEXT_CLUB" }
   | { type: "PLAYER_BUZZ"; playerId: string; now: number; totalWords: number }
   | { type: "REQUEST_SKIP"; playerId: string }
+  /** Ninguem apertou o botao a tempo: encerra a pergunta sem pontos. */
+  | { type: "AUTO_SKIP" }
+  | { type: "SET_COUNTDOWN"; endsAt: number | null }
   | { type: "SUBMIT_ANSWER"; playerId: string; answer: string }
   | { type: "TIMEOUT"; now: number }
   | { type: "HOST_JUDGE"; playerId: string; correct: boolean; now: number }

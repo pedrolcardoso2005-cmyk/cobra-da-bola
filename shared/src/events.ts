@@ -33,6 +33,8 @@ export interface ClientToServerEvents {
   "room:resume": () => void;
   /** Voluntarily leaves the room while still in the lobby, freeing the slot for someone else. */
   "room:leave": () => void;
+  /** Anfitriao remove um jogador da sala (so antes de comecar). */
+  "room:kick": (payload: { playerId: string }) => void;
 
   "host:releaseQuestion": (payload: { questionId?: string }) => void;
   "host:armButtons": () => void;
@@ -65,8 +67,8 @@ export interface ServerToClientEvents {
   "room:question": (payload: {
     question: PublicQuestion | null;
     careerClubs: string[] | null;
-    /** Resposta certa, enviada a todos so depois que a pergunta foi pulada. */
-    skippedAnswer?: string | null;
+    /** Resposta certa, enviada a todos so depois que a rodada termina. */
+    revealedAnswer?: string | null;
   }) => void;
   /** Host-only: the answer key for the current question/career, to judge against. */
   "host:answerKey": (payload: { question: HostQuestionView | null; careerPlayerName: string | null }) => void;
@@ -74,6 +76,8 @@ export interface ServerToClientEvents {
   "player:buttonState": (payload: { state: PlayerButtonState }) => void;
   "error": (payload: { message: string }) => void;
   "room:closed": (payload: { reason: string }) => void;
+  /** Voce foi removido da sala pelo anfitriao. */
+  "room:kicked": () => void;
 
   "matchmaking:queued": (payload: { targetCount: number; waiting: number }) => void;
   "matchmaking:found": (payload: { code: string; isHost: boolean }) => void;

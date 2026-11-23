@@ -10,7 +10,8 @@ import { roomManager } from "../src/game/rooms.js";
 import { EngineError } from "../src/game/engine.js";
 
 function mkSettings(targetCount: number): MatchSettings {
-  return { answerSeconds: 10, categories: ["aleatorio"], difficulties: [], kind: "casual", targetCount };
+  // "ranked" = fila automatica, que continua comecando sozinha ao encher.
+  return { answerSeconds: 10, categories: ["aleatorio"], difficulties: [], kind: "ranked", targetCount };
 }
 
 let nextUserId = 0;
