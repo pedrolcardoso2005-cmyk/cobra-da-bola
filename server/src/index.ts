@@ -13,6 +13,7 @@ import { rankingRouter } from "./ranking/routes.js";
 import { roomsRouter } from "./game/routes.js";
 import { soloRouter } from "./solo/routes.js";
 import { adminRouter } from "./admin/routes.js";
+import { visitRouter } from "./admin/visits.js";
 import { registerSocketHandlers } from "./realtime/socket.js";
 import { canonicalHostMiddleware } from "./http/canonicalHost.js";
 import { seedDatabase } from "./questions/seed.js";
@@ -89,6 +90,7 @@ app.use("/api/ranking", rankingRouter);
 app.use("/api/salas", roomsRouter);
 app.use("/api/solo", soloRouter);
 app.use("/api/admin", adminRouter);
+app.use("/api/visita", visitRouter);
 
 // In production, the web app is built and served from the same process
 // (see server/ENV_SETUP.md / deploy notes) so there's a single Railway

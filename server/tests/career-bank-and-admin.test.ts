@@ -11,6 +11,7 @@ const { listCareerQuestions, pickRandomCareerQuestion } = await import("../src/d
 const { buildAdminSummary } = await import("../src/admin/routes.js");
 const { touchUser, socketOpened, socketClosed, resetPresence } = await import("../src/admin/presence.js");
 const { db } = await import("../src/db/db.js");
+const { recordVisit, visitStats, spDay } = await import("../src/admin/visits.js");
 
 describe("banco de carreiras", () => {
   it("tem 500 jogadores, sem repetir, todos com 2+ clubes", () => {
@@ -60,5 +61,25 @@ describe("painel admin", () => {
     socketClosed("u2");
     s = buildAdminSummary();
     assert.equal(s.atividade.onlineAgora, 2, "quem acabou de sair ainda conta nos ultimos 5 min");
+  });
+});
+
+describe("contador de visitas", () => {
+  it("conta visitantes unicos e paginas por dia", () => {
+    const now = Date.UTC(2026, 10, 23, 15, 0, 0);
+    recordVisit("visitante-aaa", now);
+    recordVisit("visitante-aaa", now + 1000);
+    recordVisit("visitante-bbb", now);
+    recordVisit("visitante-aaa", now - 3 * 86_400_000);
+    const s = visitStats(now);
+    assert.equal(s.hoje.visitantes, 2);
+    assert.equal(s.hoje.paginas, 3);
+    assert.equal(s.visitantes7d, 2);
+    assert.equal(s.porDia.length, 14);
+    assert.equal(s.porDia[13].dia, spDay(now));
+  });
+
+  it("usa o dia de Sao Paulo (01h UTC ainda e o dia anterior)", () => {
+    assert.equal(spDay(Date.UTC(2026, 10, 24, 1, 0, 0)), "2026-11-23");
   });
 });

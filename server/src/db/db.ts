@@ -208,3 +208,17 @@ CREATE TABLE IF NOT EXISTS solo_answer_log (
 CREATE INDEX IF NOT EXISTS idx_solo_answer_log_user ON solo_answer_log(user_id, kind);
 CREATE INDEX IF NOT EXISTS idx_solo_answer_log_session ON solo_answer_log(user_id, kind, session_id);
 `);
+
+// Anonymous site visits for the admin panel: one row per visitor per day
+// (Sao Paulo calendar day), with how many pages they opened. visitor_id is
+// a random id the browser keeps in localStorage -- no personal data.
+db.exec(`
+CREATE TABLE IF NOT EXISTS site_visits (
+  day TEXT NOT NULL,
+  visitor_id TEXT NOT NULL,
+  views INTEGER NOT NULL DEFAULT 1,
+  first_at INTEGER NOT NULL,
+  last_at INTEGER NOT NULL,
+  PRIMARY KEY (day, visitor_id)
+);
+`);

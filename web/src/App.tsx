@@ -1,4 +1,6 @@
-import { Navigate, Route, Routes } from "react-router-dom";
+import { useEffect } from "react";
+import { Navigate, Route, Routes, useLocation } from "react-router-dom";
+import { trackPageView } from "./lib/visit";
 import { useAuth } from "./state/AuthContext";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
@@ -44,6 +46,11 @@ function HowToPlayRoute() {
 }
 
 export default function App() {
+  const location = useLocation();
+  useEffect(() => {
+    trackPageView(location.pathname);
+  }, [location.pathname]);
+
   return (
     <Routes>
       <Route path="/login" element={<Login />} />

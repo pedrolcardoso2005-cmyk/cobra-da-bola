@@ -6,6 +6,7 @@ import { db } from "../db/db.js";
 import { requireAdmin, requireAuth } from "../auth/routes.js";
 import { roomManager } from "../game/rooms.js";
 import { onlineUserIds, seenSince } from "./presence.js";
+import { visitStats } from "./visits.js";
 
 export const adminRouter = Router();
 adminRouter.use(requireAuth, requireAdmin);
@@ -40,6 +41,7 @@ export function buildAdminSummary() {
   const rooms = roomManager.stats();
   return {
     geradoEm: now,
+    visitas: visitStats(now),
     usuarios: {
       total: count("SELECT COUNT(*) AS n FROM users"),
       novos24h: count("SELECT COUNT(*) AS n FROM users WHERE created_at >= ?", now - DAY),
