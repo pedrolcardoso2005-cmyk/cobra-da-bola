@@ -171,3 +171,68 @@
     grid-template-columns: 1fr;
   }
 }
+
+.lobby-team__name-input {
+  width: 100%;
+  font-size: 1.2rem;
+  padding: 0.3em 0.5em;
+  border-radius: var(--radius-sm);
+  border: 2px dashed var(--giz-dim);
+  background: var(--giz);
+  color: var(--escama);
+  text-transform: uppercase;
+}
+.lobby-team__hint {
+  font-size: 0.75rem;
+  color: var(--giz-dim);
+  margin: 0.4rem 0;
+}
+
+/* Festa do campeao: foguetes, cobra dancando, titulo pulsando */
+.champion-party {
+  position: relative;
+  overflow: hidden;
+  min-height: 100vh;
+}
+.champion-party__fireworks > div {
+  position: absolute;
+  width: 160px;
+  height: 160px;
+  transform: translate(-50%, -50%);
+}
+.champion-party__title {
+  position: relative;
+  z-index: 1;
+  color: var(--lima);
+  font-size: clamp(2rem, 8vw, 4rem);
+  text-align: center;
+  text-shadow: 4px 4px 0 var(--escama);
+  animation: champion-title-pulse 900ms ease-in-out infinite;
+}
+@keyframes champion-title-pulse {
+  0%, 100% { transform: scale(1) rotate(-2deg); }
+  50% { transform: scale(1.08) rotate(2deg); }
+}
+.champion-party__snake {
+  position: relative;
+  z-index: 1;
+  transform: scale(1.6);
+  margin: 2.5rem 0 2rem;
+  animation: champion-snake-dance 700ms ease-in-out infinite;
+}
+@keyframes champion-snake-dance {
+  0%, 100% { transform: scale(1.6) rotate(-8deg) translateX(-10px); }
+  50% { transform: scale(1.6) rotate(8deg) translateX(10px); }
+}
+.champion-party__score {
+  position: relative;
+  z-index: 1;
+  font-size: 1.8rem;
+}
+
+.player-lobby-list li {
+  flex-wrap: wrap;
+}
+.lobby-team {
+  min-width: 0;
+}

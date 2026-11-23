@@ -88,11 +88,8 @@ export function registerSocketHandlers(io: Server<ClientToServerEvents, ServerTo
         socket.join(room.match.code);
 
         if (payload.role === "host") {
-          if (room.match.hostUserId !== socket.data.userId) {
-            ack({ ok: false, error: "Apenas o anfitriao pode abrir o painel do apresentador" });
-            return;
-          }
-          socket.join(`${room.match.code}:host`);
+          ack({ ok: false, error: "Este jogo nao tem apresentador: entre como jogador." });
+          return;
         } else if (payload.role === "screen") {
           socket.join(`${room.match.code}:screen`);
         } else {
@@ -116,6 +113,12 @@ export function registerSocketHandlers(io: Server<ClientToServerEvents, ServerTo
 
     socket.on("room:setTeams", (payload) => guardedHost(socket, () => roomManager.setTeams(socket.data.code!, payload.assignments)));
     socket.on("room:start", () => guardedHost(socket, () => roomManager.startWithCountdown(socket.data.code!)));
+    socket.on("room:setTeamName", (payload) =>
+      guardedHost(socket, () => roomManager.setTeamName(socket.data.code!, payload?.team, String(payload?.name ?? ""))),
+    );
+    socket.on("room:movePlayer", (payload) =>
+      guardedHost(socket, () => roomManager.movePlayer(socket.data.code!, String(payload?.playerId ?? ""), payload?.direction === -1 ? -1 : 1)),
+    );
     socket.on("room:kick", (payload) =>
       guardedHost(socket, () => roomManager.kickPlayer(socket.data.code!, String(payload?.playerId ?? ""), socket.data.userId)),
     );
@@ -132,17 +135,13 @@ export function registerSocketHandlers(io: Server<ClientToServerEvents, ServerTo
       }),
     );
 
-    socket.on("host:releaseQuestion", () => guardedHost(socket, () => roomManager.releaseQuestion(socket.data.code!)));
-    socket.on("host:armButtons", () => guardedHost(socket, () => roomManager.armButtons(socket.data.code!)));
-    socket.on("host:revealNextClub", () => guardedHost(socket, () => roomManager.revealNextClub(socket.data.code!)));
-    socket.on("host:judge", (payload) => guardedHost(socket, () => roomManager.hostJudge(socket.data.code!, payload.playerId, payload.correct)));
-    socket.on("host:endCareerRound", () => guardedHost(socket, () => roomManager.endCareerRound(socket.data.code!)));
-    socket.on("host:advance", () => guardedHost(socket, () => roomManager.advance(socket.data.code!)));
-    socket.on("host:adjustScore", (payload) => guardedHost(socket, () => roomManager.adjustScore(socket.data.code!, payload.teamOrPlayerId, payload.delta)));
-    socket.on("host:undo", () => guardedHost(socket, () => roomManager.undo(socket.data.code!)));
-    socket.on("host:endMatch", () => guardedHost(socket, () => roomManager.endMatchForce(socket.data.code!)));
+    // Sem apresentador: os antigos comandos "host:*" (julgar, mexer no
+    // placar, liberar pergunta...) foram desligados. Quem criou a sala e so
+    // jogador e nao pode alterar o jogo; o servidor conduz tudo sozinho.
 
-    socket.on("player:buzz", () => guarded(socket, () => roomManager.playerBuzz(socket.data.code!, socket.data.playerId!)));
+    socket.on("player:buzz", (payload) =>
+      guarded(socket, () => roomManager.playerBuzz(socket.data.code!, socket.data.playerId!, Number(payload?.visibleWords) || undefined)),
+    );
     socket.on("player:submitAnswer", (payload) =>
       guarded(socket, () => roomManager.submitAnswer(socket.data.code!, socket.data.playerId!, payload.answer)),
     );

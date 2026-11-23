@@ -324,6 +324,17 @@ class RoomManager extends EventEmitter {
     });
   }
 
+  setTeamName(code: string, team: TeamKey, name: string): void {
+    const room = this.mustGet(code);
+    if (team !== "A" && team !== "B") throw new EngineError("Equipe invalida");
+    this.dispatch(room, { type: "SET_TEAM_NAME", team, name: String(name ?? "") });
+  }
+
+  movePlayer(code: string, playerId: string, direction: -1 | 1): void {
+    const room = this.mustGet(code);
+    this.dispatch(room, { type: "MOVE_PLAYER", playerId, direction: direction === -1 ? -1 : 1 });
+  }
+
   /** Anfitriao remove alguem da sala antes de comecar. */
   kickPlayer(code: string, playerId: string, byUserId: string): void {
     const room = this.mustGet(code);
@@ -418,7 +429,7 @@ class RoomManager extends EventEmitter {
     this.dispatch(room, { type: "REVEAL_NEXT_CLUB" });
   }
 
-  playerBuzz(code: string, playerId: string): void {
+  playerBuzz(code: string, playerId: string, visibleWords?: number): void {
     const room = this.mustGet(code);
     // The reducer is pure and only sees MatchState (no question text), so
     // the word count used to freeze the reveal has to be computed here,
@@ -434,7 +445,7 @@ class RoomManager extends EventEmitter {
     const totalWords = currentQuestionId
       ? (room.questionCache.get(currentQuestionId)?.prompt.split(/\s+/).filter(Boolean).length ?? 0)
       : 0;
-    this.dispatch(room, { type: "PLAYER_BUZZ", playerId, now: Date.now(), totalWords });
+    this.dispatch(room, { type: "PLAYER_BUZZ", playerId, now: Date.now(), totalWords, visibleWords });
     const buzz = currentBuzzOf(room.match);
     if (buzz?.firstPlayerId === playerId && room.match.timer) {
       this.clearPendingTimeout(room);

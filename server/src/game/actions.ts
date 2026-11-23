@@ -11,11 +11,13 @@ export type EngineAction =
   | { type: "RELEASE_CAREER_QUESTION"; careerQuestion: CareerQuestion }
   | { type: "ARM_BUTTONS"; now: number; durationSeconds: AnswerSeconds }
   | { type: "REVEAL_NEXT_CLUB" }
-  | { type: "PLAYER_BUZZ"; playerId: string; now: number; totalWords: number }
+  | { type: "PLAYER_BUZZ"; playerId: string; now: number; totalWords: number; visibleWords?: number }
   | { type: "REQUEST_SKIP"; playerId: string }
   /** Ninguem apertou o botao a tempo: encerra a pergunta sem pontos. */
   | { type: "AUTO_SKIP" }
   | { type: "SET_COUNTDOWN"; endsAt: number | null }
+  | { type: "SET_TEAM_NAME"; team: TeamKey; name: string }
+  | { type: "MOVE_PLAYER"; playerId: string; direction: -1 | 1 }
   | { type: "SUBMIT_ANSWER"; playerId: string; answer: string }
   | { type: "TIMEOUT"; now: number }
   | { type: "HOST_JUDGE"; playerId: string; correct: boolean; now: number }

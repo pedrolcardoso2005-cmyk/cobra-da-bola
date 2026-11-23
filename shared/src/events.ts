@@ -35,6 +35,10 @@ export interface ClientToServerEvents {
   "room:leave": () => void;
   /** Anfitriao remove um jogador da sala (so antes de comecar). */
   "room:kick": (payload: { playerId: string }) => void;
+  /** Anfitriao muda o nome de uma equipe. */
+  "room:setTeamName": (payload: { team: TeamKey; name: string }) => void;
+  /** Anfitriao muda a ordem de quem responde (so antes de comecar). */
+  "room:movePlayer": (payload: { playerId: string; direction: -1 | 1 }) => void;
 
   "host:releaseQuestion": (payload: { questionId?: string }) => void;
   "host:armButtons": () => void;
@@ -46,7 +50,7 @@ export interface ClientToServerEvents {
   "host:undo": () => void;
   "host:endMatch": () => void;
 
-  "player:buzz": (payload: { questionId: string; clientSentAt: number }) => void;
+  "player:buzz": (payload: { questionId: string; clientSentAt: number; visibleWords?: number }) => void;
   "player:submitAnswer": (payload: { questionId: string; answer: string }) => void;
   /** Only this round's eligible representatives (fase 1/semifinal/final) may
    * send this, and only before anyone has buzzed. Resolved as soon as both

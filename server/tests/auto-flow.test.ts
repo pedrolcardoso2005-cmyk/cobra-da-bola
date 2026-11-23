@@ -138,3 +138,35 @@ describe("fluxo automatico (sem apresentador)", () => {
     assert.ok(room.match.phase1?.currentQuestionId);
   });
 });
+
+describe("nome das equipes, ordem e pergunta parando onde apertou", () => {
+  it("anfitriao renomeia equipes e muda a ordem; a Fase 1 segue essa ordem", async () => {
+    const room = roomManager.createRoom("dono2", { ...settings(4), kind: "casual" as const });
+    const code = room.match.code;
+    for (let i = 0; i < 4; i++) roomManager.addOrReconnectPlayer(code, { userId: `o${i}`, displayName: `P${i}`, avatarUrl: null });
+    roomManager.setTeamName(code, "A", "  Os   Fodas ");
+    roomManager.setTeamName(code, "B", "Os Bostas");
+    assert.deepEqual(room.match.settings.teamNames, { A: "Os Fodas", B: "Os Bostas" });
+    const teamA = room.match.players.filter((p) => p.teamId === "A");
+    roomManager.movePlayer(code, teamA[1].id, -1);
+    const newOrder = room.match.players.filter((p) => p.teamId === "A").map((p) => p.id);
+    assert.deepEqual(newOrder, [teamA[1].id, teamA[0].id], "o 2o subiu para 1o");
+    RM.COUNTDOWN_MS = 5;
+    roomManager.startWithCountdown(code);
+    await sleep(40);
+    assert.equal(room.match.phase, "phase1");
+    const a = room.match.teams!.find((t) => t.id === "A")!;
+    assert.equal(a.playerIds[a.rotationIndex], teamA[1].id, "quem foi colocado em 1o comeca");
+  });
+
+  it("congela na palavra que estava na tela de quem apertou", () => {
+    const room = roomManager.createRoom("dono3", settings(2));
+    join(room.match.code, 2);
+    const m = room.match;
+    const player = eligibleBuzzers(m)[0];
+    const buzz = activeBuzz(m)!;
+    buzz.questionOpenedAt = Date.now() - 60_000; // tempo de sobra para a pergunta inteira
+    roomManager.playerBuzz(room.match.code, player, 3);
+    assert.equal(activeBuzz(room.match)!.frozenWordCount, 3);
+  });
+});

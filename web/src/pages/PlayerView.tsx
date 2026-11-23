@@ -5,7 +5,10 @@ import { useAuth } from "../state/AuthContext";
 import { PlayerButton } from "../components/PlayerButton";
 import "../components/CareerBoard.css";
 import { sfx } from "../sound/sfx";
-import { REVEAL_WORD_MS } from "@cobra/shared";
+import { REVEAL_WORD_MS, teamDisplayName } from "@cobra/shared";
+import { LiveScore } from "../components/LiveScore";
+import { Fireworks } from "../components/scenes/Fireworks";
+import { SoloCharacter } from "../components/SoloCharacter";
 import "./PlayerView.css";
 
 export default function PlayerView() {
@@ -34,18 +37,12 @@ export default function PlayerView() {
   const frozenWordCount = buzz?.frozenWordCount ?? null;
   const questionOpenedAt = buzz?.questionOpenedAt ?? null;
 
-  // "Parar revelacao": a purely local, personal pause -- stops THIS
-  // player's own screen from advancing further, without buzzing (so it
-  // never claims the right to answer) and without touching server state
-  // at all. The authoritative server freeze (frozenWordCount, set the
-  // instant someone actually buzzes) always takes priority over a local
-  // pause, since that's the real end-of-round state everyone must agree on.
-  const [locallyPaused, setLocallyPaused] = useState(false);
-  const pausedAtCountRef = useRef<number | null>(null);
+  // Um botao so: ao apertar RESPONDER a pergunta congela na hora, na
+  // palavra que estava na tela (localmente ja, e o servidor confirma).
+  const [localFreeze, setLocalFreeze] = useState<number | null>(null);
   useEffect(() => {
-    setLocallyPaused(false);
-    pausedAtCountRef.current = null;
-  }, [playerView?.currentQuestion?.id]);
+    setLocalFreeze(null);
+  }, [playerView?.currentQuestion?.id, questionOpenedAt]);
 
   // Forces a re-render every tick while the reveal is still live, purely
   // to recompute the derived count below from the server anchor -- holds
@@ -53,15 +50,15 @@ export default function PlayerView() {
   // question; the displayed count is always recomputed from server data).
   const [, forceTick] = useState(0);
   useEffect(() => {
-    if (!questionOpenedAt || frozenWordCount != null || locallyPaused) return;
+    if (!questionOpenedAt || frozenWordCount != null || localFreeze != null) return;
     const id = setInterval(() => forceTick((n) => n + 1), REVEAL_WORD_MS);
     return () => clearInterval(id);
-  }, [questionOpenedAt, frozenWordCount, locallyPaused]);
+  }, [questionOpenedAt, frozenWordCount, localFreeze]);
 
   const revealedCount = (() => {
     if (!questionOpenedAt) return 0; // buzzers not armed yet -- nothing to show
     if (frozenWordCount != null) return frozenWordCount;
-    if (locallyPaused && pausedAtCountRef.current != null) return pausedAtCountRef.current;
+    if (localFreeze != null) return localFreeze;
     const elapsed = Date.now() - questionOpenedAt;
     return Math.max(1, Math.min(Math.floor(elapsed / REVEAL_WORD_MS) + 1, words.length));
   })();
@@ -129,14 +126,25 @@ export default function PlayerView() {
     const target = match.settings.targetCount;
     const isCreator = match.hostUserId === user?.id;
     const canStart = match.players.length >= 2 && !countdownLeft;
-    const lobbyRow = (p: (typeof match.players)[number], team: "A" | "B" | null) => (
+    const lobbyRow = (p: (typeof match.players)[number], team: "A" | "B" | null, pos = 0, total = 0) => (
       <li key={p.id} className={p.connected ? "" : "is-offline"}>
         <span>
+          {team ? `${pos + 1}o ` : ""}
           {p.displayName}
           {p.userId === match.hostUserId ? " (criou a sala)" : ""}
         </span>
         {isCreator && (
           <span className="row" style={{ gap: 6 }}>
+            {team && pos > 0 && (
+              <button type="button" className="btn btn-ghost lobby-kick" aria-label="Subir na ordem" onClick={() => actions.movePlayer(p.id, -1)}>
+                ↑
+              </button>
+            )}
+            {team && pos < total - 1 && (
+              <button type="button" className="btn btn-ghost lobby-kick" aria-label="Descer na ordem" onClick={() => actions.movePlayer(p.id, 1)}>
+                ↓
+              </button>
+            )}
             {team && (
               <button type="button" className="btn btn-ghost lobby-kick" onClick={() => actions.setTeams({ [p.id]: team === "A" ? "B" : "A" })}>
                 Mudar p/ {team === "A" ? "B" : "A"}
@@ -174,10 +182,28 @@ export default function PlayerView() {
               const members = match.players.filter((p) => p.teamId === t);
               return (
                 <section key={t} className={`lobby-team lobby-team--${t.toLowerCase()}`}>
-                  <h2 className="font-display">Equipe {t} ({members.length})</h2>
-                  <ul className="player-lobby-list">
-                    {members.map((p) => lobbyRow(p, t))}
-                  </ul>
+                  {isCreator ? (
+                    <input
+                      key={`${t}-${match.settings.teamNames?.[t] ?? ""}`}
+                      className="lobby-team__name-input font-display"
+                      defaultValue={teamDisplayName(match.settings, t)}
+                      maxLength={24}
+                      aria-label={`Nome da equipe ${t}`}
+                      onBlur={(e) => {
+                        const v = e.currentTarget.value.trim();
+                        if (v && v !== teamDisplayName(match.settings, t)) actions.setTeamName(t, v);
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") e.currentTarget.blur();
+                      }}
+                    />
+                  ) : (
+                    <h2 className="font-display">{teamDisplayName(match.settings, t)}</h2>
+                  )}
+                  <p className="lobby-team__hint">{members.length} jogadores -- respondem nesta ordem:</p>
+                  <ol className="player-lobby-list">
+                    {members.map((p, i) => lobbyRow(p, t, i, members.length))}
+                  </ol>
                 </section>
               );
             })}
@@ -213,12 +239,31 @@ export default function PlayerView() {
 
   if (match.phase === "champion") {
     const won = match.winnerUserId === user?.id;
+    const winner = match.players.find((p) => p.userId === match.winnerUserId);
+    const f = match.final;
     return (
-      <div className="center-page">
-        <h1 className="font-display" style={{ color: won ? "var(--lima)" : "var(--giz-dim)", fontSize: "2.4rem" }}>
-          {won ? "Voce e o Cobra da Bola!" : "Fim de jogo"}
+      <div className="center-page champion-party">
+        <div className="champion-party__fireworks" aria-hidden="true">
+          <div style={{ left: "15%", top: "18%" }}><Fireworks intense /></div>
+          <div style={{ left: "82%", top: "22%" }}><Fireworks intense /></div>
+          <div style={{ left: "30%", top: "70%" }}><Fireworks intense /></div>
+          <div style={{ left: "72%", top: "75%" }}><Fireworks intense /></div>
+          <div style={{ left: "50%", top: "10%" }}><Fireworks intense /></div>
+        </div>
+        <h1 className="font-display champion-party__title">
+          {won ? "Voce e o Cobra da Bola!" : `${winner?.displayName ?? "Temos um campeao"} e o Cobra da Bola!`}
         </h1>
-        <p>{self.correctAnswers} acertos - {self.wrongAnswers} erros</p>
+        <div className="champion-party__snake">
+          <SoloCharacter state="champion" caption={null} />
+        </div>
+        {f && (
+          <p className="font-score champion-party__score">
+            {match.players.find((p) => p.id === f.playerAId)?.displayName} {f.scoreA} x {f.scoreB}{" "}
+            {match.players.find((p) => p.id === f.playerBId)?.displayName}
+          </p>
+        )}
+        <p>Voce: {self.correctAnswers} acertos - {self.wrongAnswers} erros</p>
+        <button className="btn btn-primary" onClick={() => navigate("/")}>Voltar ao inicio</button>
       </div>
     );
   }
@@ -234,12 +279,13 @@ export default function PlayerView() {
       <header className="player-view__header">
         <div>
           <span className="font-display">{self.displayName}</span>
-          {team && <span className={`badge-team badge-team-${team.toLowerCase()}`} style={{ marginLeft: 8 }}>Equipe {team}</span>}
+          {team && match.teams && <span className={`badge-team badge-team-${team.toLowerCase()}`} style={{ marginLeft: 8 }}>{teamDisplayName(match.settings, team)}</span>}
         </div>
         <span className="player-view__phase">{phaseLabel(match.phase)}</span>
       </header>
 
       <main className="player-view__main">
+        <LiveScore match={match} selfId={self.id} />
         {playerView.currentQuestion && questionOpenedAt && (
           <div className="player-answer">
             <p className="player-answer__question">{words.slice(0, revealedCount).join(" ")}</p>
@@ -248,27 +294,12 @@ export default function PlayerView() {
                 A pergunta foi interrompida porque {interruptedBy === self.displayName ? "voce respondeu" : `${interruptedBy ?? "alguem"} respondeu`} antes de ela terminar.
               </p>
             )}
-            {locallyPaused && frozenWordCount == null && (
-              <p className="player-view__note">Revelacao parada so na sua tela -- apertar RESPONDER ou pedir para pular quando quiser.</p>
-            )}
-            {playerView.myButtonState === "armed" && frozenWordCount == null && !locallyPaused && revealedCount < words.length && (
-              <button
-                type="button"
-                className="btn btn-ghost"
-                onClick={() => {
-                  pausedAtCountRef.current = revealedCount;
-                  setLocallyPaused(true);
-                }}
-              >
-                Parar revelacao
-              </button>
-            )}
           </div>
         )}
 
 
 
-        {playerView.myButtonState === "armed" && !buzz?.firstPlayerId && (
+        {playerView.myButtonState === "armed" && !buzz?.firstPlayerId && match.phase !== "career" && (
           <div className="player-skip">
             {otherSkipRequesterName ? (
               <button className="btn btn-ghost" onClick={actions.requestSkip}>
@@ -301,7 +332,13 @@ export default function PlayerView() {
           buzzedOtherName={buzzedOtherName(match, playerView.myButtonState)}
           teamLabel={team ?? undefined}
           onPress={() => {
-            if (currentItemId) actions.buzz(currentItemId);
+            if (!currentItemId) return;
+            if (playerView.currentQuestion && questionOpenedAt && frozenWordCount == null) {
+              setLocalFreeze(revealedCount);
+              actions.buzz(currentItemId, revealedCount);
+            } else {
+              actions.buzz(currentItemId);
+            }
           }}
         />
 

@@ -4,6 +4,7 @@ import { useRoom } from "../state/useRoom";
 import { PresenterCharacter, type PresenterState } from "../components/Presenter/PresenterCharacter";
 import { QuestionPanel } from "../components/QuestionPanel";
 import { ScoreBoard } from "../components/ScoreBoard";
+import { teamDisplayName } from "@cobra/shared";
 import { CareerBoard } from "../components/CareerBoard";
 import { BracketBoard } from "../components/BracketBoard";
 import { ChampionScreen } from "../components/ChampionScreen";
@@ -83,7 +84,7 @@ export default function ScreenView() {
         {match.phase === "phase1" && match.teams && (
           <>
             <Phase1Scene match={match} />
-            <ScoreBoard teamA={match.teams[0]} teamB={match.teams[1]} nameOf={nameOf} />
+            <ScoreBoard teamA={match.teams[0]} teamB={match.teams[1]} nameOf={nameOf} teamLabel={(id) => teamDisplayName(match.settings, id)} />
           </>
         )}
 

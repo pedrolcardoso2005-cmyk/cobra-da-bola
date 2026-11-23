@@ -88,3 +88,9 @@ export function semifinalPairings(seeded: string[]): [[string, string], [string,
     [second, third],
   ];
 }
+
+/** Nome da equipe para mostrar na tela ("Equipe A" se o anfitriao nao mudou). */
+export function teamDisplayName(settings: { teamNames?: Partial<Record<"A" | "B", string>> }, team: "A" | "B"): string {
+  const name = settings.teamNames?.[team]?.trim();
+  return name ? name : `Equipe ${team}`;
+}

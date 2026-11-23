@@ -16,7 +16,7 @@ import RoomEntry from "./pages/RoomEntry";
 import SoloView from "./pages/SoloView";
 import PlayerView from "./pages/PlayerView";
 import ScreenView from "./pages/ScreenView";
-import HostView from "./pages/HostView";
+import { useParams } from "react-router-dom";
 import Admin from "./pages/Admin";
 
 function RequireAuth({ children }: { children: React.ReactElement }) {
@@ -45,6 +45,11 @@ function HowToPlayRoute() {
   return user ? <HowToPlay /> : <HowToPlay ctaTo="/login" />;
 }
 
+function RedirectToPlayer() {
+  const { code } = useParams();
+  return <Navigate to={`/sala/${code}/jogador`} replace />;
+}
+
 export default function App() {
   const location = useLocation();
   useEffect(() => {
@@ -69,7 +74,7 @@ export default function App() {
       <Route path="/sala/:code" element={<RequireAuth><RoomEntry /></RequireAuth>} />
       <Route path="/sala/:code/jogador" element={<RequireAuth><PlayerView /></RequireAuth>} />
       <Route path="/sala/:code/telao" element={<RequireAuth><ScreenView /></RequireAuth>} />
-      <Route path="/sala/:code/apresentador" element={<RequireAuth><HostView /></RequireAuth>} />
+      <Route path="/sala/:code/apresentador" element={<RedirectToPlayer />} />
 
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

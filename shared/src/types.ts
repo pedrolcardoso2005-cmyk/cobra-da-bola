@@ -209,6 +209,8 @@ export interface MatchSettings {
    * convention as `categories` (any theme). Optional so existing settings
    * objects built before this field existed still type-check. */
   careerThemes?: CareerTheme[];
+  /** Nomes das equipes escolhidos pelo anfitriao (padrao "Equipe A/B"). */
+  teamNames?: Partial<Record<TeamKey, string>>;
   kind: MatchKind;
   /** Exact number of players the room needs; the match starts
    * automatically (server-authoritative, no host action required) the

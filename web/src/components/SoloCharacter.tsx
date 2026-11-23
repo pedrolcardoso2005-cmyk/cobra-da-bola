@@ -17,13 +17,13 @@ const CAPTIONS: Record<SoloCharacterState, string | null> = {
  * mudam a boca e a animacao, e o truque de remontar pela key reinicia a
  * animacao sempre que o estado muda.
  */
-export function SoloCharacter({ state }: { state: SoloCharacterState }) {
+export function SoloCharacter({ state, caption: captionOverride }: { state: SoloCharacterState; caption?: string | null }) {
   const [bounceKey, setBounceKey] = useState(0);
   useEffect(() => {
     setBounceKey((k) => k + 1);
   }, [state]);
 
-  const caption = CAPTIONS[state];
+  const caption = captionOverride !== undefined ? captionOverride : CAPTIONS[state];
 
   return (
     <div className={`solo-character solo-character--${state}`} key={bounceKey} role="img" aria-label="Seu companheiro do Modo Solo">

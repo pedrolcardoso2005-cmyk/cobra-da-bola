@@ -87,6 +87,8 @@ function useActions(socket: ReturnType<typeof getSocket>, code: string | undefin
   const resume = useCallback(() => socket.emit("room:resume"), [socket]);
   const leaveRoom = useCallback(() => socket.emit("room:leave"), [socket]);
   const kickPlayer = useCallback((playerId: string) => socket.emit("room:kick", { playerId }), [socket]);
+  const setTeamName = useCallback((team: TeamKey, name: string) => socket.emit("room:setTeamName", { team, name }), [socket]);
+  const movePlayer = useCallback((playerId: string, direction: -1 | 1) => socket.emit("room:movePlayer", { playerId, direction }), [socket]);
   const releaseQuestion = useCallback((questionId?: string) => socket.emit("host:releaseQuestion", { questionId }), [socket]);
   const armButtons = useCallback(() => socket.emit("host:armButtons"), [socket]);
   const revealNextClub = useCallback(() => socket.emit("host:revealNextClub"), [socket]);
@@ -96,7 +98,10 @@ function useActions(socket: ReturnType<typeof getSocket>, code: string | undefin
   const adjustScore = useCallback((teamOrPlayerId: string, delta: number) => socket.emit("host:adjustScore", { teamOrPlayerId, delta }), [socket]);
   const undo = useCallback(() => socket.emit("host:undo"), [socket]);
   const endMatch = useCallback(() => socket.emit("host:endMatch"), [socket]);
-  const buzz = useCallback((questionId: string) => socket.emit("player:buzz", { questionId, clientSentAt: Date.now() }), [socket]);
+  const buzz = useCallback(
+    (questionId: string, visibleWords?: number) => socket.emit("player:buzz", { questionId, clientSentAt: Date.now(), visibleWords }),
+    [socket],
+  );
   const submitAnswer = useCallback((questionId: string, answer: string) => socket.emit("player:submitAnswer", { questionId, answer }), [socket]);
   const requestSkip = useCallback(() => socket.emit("player:requestSkip"), [socket]);
 
@@ -108,6 +113,8 @@ function useActions(socket: ReturnType<typeof getSocket>, code: string | undefin
     resume,
     leaveRoom,
     kickPlayer,
+    setTeamName,
+    movePlayer,
     releaseQuestion,
     armButtons,
     revealNextClub,

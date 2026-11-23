@@ -264,7 +264,10 @@ export function applyAction(input: MatchState, action: EngineAction): MatchState
       // everyone no matter each client's own latency/clock.
       if (buzz.questionOpenedAt != null) {
         const wordsElapsed = Math.floor((action.now - buzz.questionOpenedAt) / REVEAL_WORD_MS) + 1;
-        buzz.frozenWordCount = Math.max(1, Math.min(wordsElapsed, action.totalWords));
+        // A pergunta para exatamente onde estava na tela de quem apertou
+        // (nunca alem do que o tempo ja permitia mostrar).
+        const seen = action.visibleWords && action.visibleWords > 0 ? action.visibleWords : Infinity;
+        buzz.frozenWordCount = Math.max(1, Math.min(wordsElapsed, action.totalWords, seen));
       } else {
         buzz.frozenWordCount = action.totalWords;
       }
@@ -303,6 +306,28 @@ export function applyAction(input: MatchState, action: EngineAction): MatchState
       const other = eligible.find((id) => id !== action.playerId);
       const otherAgreedOrGone = !other || buzz.skipRequestedBy.includes(other) || !findPlayer(state, other).connected;
       if (otherAgreedOrGone) resolveSkip(state);
+      return state;
+    }
+
+    case "SET_TEAM_NAME": {
+      const name = action.name.replace(/\s+/g, " ").trim().slice(0, 24);
+      state.settings = { ...state.settings, teamNames: { ...(state.settings.teamNames ?? {}), [action.team]: name } };
+      return state;
+    }
+
+    case "MOVE_PLAYER": {
+      // Troca de lugar com o vizinho da MESMA equipe; a ordem da lista e a
+      // ordem em que cada um responde na Fase 1.
+      if (state.phase !== "lobby") throw new EngineError("A ordem so pode mudar antes de comecar");
+      const idx = state.players.findIndex((p) => p.id === action.playerId);
+      if (idx < 0) return state;
+      const team = state.players[idx].teamId;
+      let j = idx + action.direction;
+      while (j >= 0 && j < state.players.length && state.players[j].teamId !== team) j += action.direction;
+      if (j < 0 || j >= state.players.length) return state;
+      const players = [...state.players];
+      [players[idx], players[j]] = [players[j], players[idx]];
+      state.players = players;
       return state;
     }
 
