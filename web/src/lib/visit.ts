@@ -1,6 +1,6 @@
-// Anonymous page-view ping for the admin visit counter, plus the Google
-// Analytics page_view (the site is a single-page app, so GA only sees the
-// first load unless each route change is reported).
+// Anonymous page-view ping for the admin visit counter. Google Analytics
+// counts route changes by itself ("metrica otimizada" -> mudancas no
+// historico do navegador), so nothing is sent to GA from here.
 import { API_BASE_URL } from "./api";
 
 const KEY = "cobra_visitor";
@@ -18,7 +18,7 @@ function visitorId(): string | null {
   }
 }
 
-export function trackPageView(path: string): void {
+export function trackPageView(_path: string): void {
   const id = visitorId();
   if (id) {
     fetch(`${API_BASE_URL}/api/visita`, {
@@ -28,6 +28,4 @@ export function trackPageView(path: string): void {
       keepalive: true,
     }).catch(() => {});
   }
-  const gtag = (window as unknown as { gtag?: (...args: unknown[]) => void }).gtag;
-  if (gtag) gtag("event", "page_view", { page_path: path, page_location: window.location.href });
 }
