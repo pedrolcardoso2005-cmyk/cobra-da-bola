@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <rect width="64" height="64" rx="14" fill="#0d0d0d"/>
+  <!-- corpo da cobra em S -->
+  <path d="M46 16 C30 10 14 18 22 30 C28 39 46 34 44 46 C42 56 24 56 16 50"
+        fill="none" stroke="#d4f000" stroke-width="9" stroke-linecap="round"/>
+  <!-- cabeca -->
+  <ellipse cx="47" cy="17" rx="9" ry="7.5" fill="#d4f000"/>
+  <circle cx="49.5" cy="14.5" r="2.2" fill="#0d0d0d"/>
+  <!-- lingua -->
+  <path d="M55 19 L60 21 M57.5 20 L60 18" stroke="#ff7a1a" stroke-width="2" stroke-linecap="round"/>
+  <!-- bola -->
+  <circle cx="15" cy="50" r="7" fill="#f4f4ea" stroke="#0d0d0d" stroke-width="1.5"/>
+  <polygon points="15,46.5 18.3,48.9 17,52.8 13,52.8 11.7,48.9" fill="#0d0d0d"/>
+</svg>
