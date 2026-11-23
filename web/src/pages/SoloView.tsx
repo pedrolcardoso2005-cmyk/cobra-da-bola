@@ -235,7 +235,7 @@ export default function SoloView() {
                 <button className="btn btn-primary" onClick={startQuestions}>Jogar de novo</button>
               </div>
             ) : !question ? (
-              <p>{questionEmpty ? "Nenhuma pergunta encontrada com esse tema/dificuldade. Tente outro filtro." : 'Escolha o tema e a dificuldade e aperte "Comecar".'}</p>
+              <p>{questionEmpty ? "Voce ja respondeu todas as perguntas desta partida. Aperte Reiniciar." : 'Aperte "Comecar" para jogar.'}</p>
             ) : (
               <div className="stack">
                 <p className="player-answer__question">{soloWords.slice(0, soloRevealedCount).join(" ")}</p>
@@ -303,7 +303,7 @@ export default function SoloView() {
             </div>
 
             {!career ? (
-              <p>{careerEmpty ? "Nenhuma carreira encontrada com esse tema/dificuldade. Tente outro filtro." : 'Escolha o tema e a dificuldade e aperte "Comecar".'}</p>
+              <p>{careerEmpty ? "Voce ja viu todas as carreiras desta partida. Aperte Reiniciar." : 'Aperte "Comecar" para jogar.'}</p>
             ) : (
               <div className="stack">
                 <span className="font-display career-board__title">De quem e essa carreira?</span>
