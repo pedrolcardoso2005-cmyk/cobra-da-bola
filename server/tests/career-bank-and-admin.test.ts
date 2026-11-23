@@ -11,7 +11,7 @@ const { listCareerQuestions, pickRandomCareerQuestion } = await import("../src/d
 const { buildAdminSummary } = await import("../src/admin/routes.js");
 const { touchUser, socketOpened, socketClosed, resetPresence } = await import("../src/admin/presence.js");
 const { db } = await import("../src/db/db.js");
-const { recordVisit, visitStats, spDay } = await import("../src/admin/visits.js");
+const { recordVisit, visitStats, spDay, allowVisit, resetVisitLimits } = await import("../src/admin/visits.js");
 
 describe("banco de carreiras", () => {
   it("tem 500 jogadores, sem repetir, todos com 2+ clubes", () => {
@@ -81,5 +81,20 @@ describe("contador de visitas", () => {
 
   it("usa o dia de Sao Paulo (01h UTC ainda e o dia anterior)", () => {
     assert.equal(spDay(Date.UTC(2026, 10, 24, 1, 0, 0)), "2026-11-23");
+  });
+});
+
+describe("limite do contador de visitas", () => {
+  it("bloqueia spam do mesmo IP", () => {
+    resetVisitLimits();
+    const now = Date.now();
+    let ok = 0;
+    for (let i = 0; i < 50; i++) if (allowVisit("1.2.3.4", "visitante-x", now)) ok++;
+    assert.equal(ok, 30);
+    assert.equal(allowVisit("5.6.7.8", "visitante-y", now), true, "outro IP nao e afetado");
+    resetVisitLimits();
+    let ids = 0;
+    for (let i = 0; i < 400; i++) if (allowVisit("9.9.9.9", `visitante-${i}`, Date.UTC(2026, 10, 23, 4, 0, 0) + i * 61_000)) ids++;
+    assert.equal(ids, 300);
   });
 });

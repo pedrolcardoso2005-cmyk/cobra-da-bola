@@ -35,10 +35,40 @@ export function visitStats(now = Date.now()) {
   };
 }
 
+// Simple in-memory limit so nobody can inflate the numbers by spamming
+// this public endpoint: at most 30 pings per IP per minute and at most
+// 300 distinct visitor ids per IP per day are counted.
+const perMinute = new Map<string, { windowStart: number; n: number }>();
+const idsPerDay = new Map<string, Set<string>>();
+
+export function allowVisit(ip: string, visitorId: string, now = Date.now()): boolean {
+  const m = perMinute.get(ip);
+  if (!m || now - m.windowStart >= 60_000) perMinute.set(ip, { windowStart: now, n: 1 });
+  else if (++m.n > 30) return false;
+  const key = `${spDay(now)}|${ip}`;
+  let ids = idsPerDay.get(key);
+  if (!ids) {
+    if (idsPerDay.size > 50_000) idsPerDay.clear();
+    ids = new Set();
+    idsPerDay.set(key, ids);
+  }
+  if (!ids.has(visitorId)) {
+    if (ids.size >= 300) return false;
+    ids.add(visitorId);
+  }
+  return true;
+}
+
+export function resetVisitLimits(): void {
+  perMinute.clear();
+  idsPerDay.clear();
+}
+
 export const visitRouter = Router();
 visitRouter.post("/", (req, res) => {
   const id = typeof req.body?.visitorId === "string" ? req.body.visitorId : "";
   if (!VISITOR_ID.test(id)) return res.status(400).json({ error: "visitorId invalido" });
-  recordVisit(id);
+  const ip = String(req.headers["x-forwarded-for"] ?? req.socket.remoteAddress ?? "").split(",")[0].trim();
+  if (allowVisit(ip, id)) recordVisit(id);
   res.status(204).end();
 });
