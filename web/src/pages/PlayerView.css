@@ -10,6 +10,8 @@
   align-items: center;
   padding: 1rem 1.25rem;
   background: #161616;
+  /* fundo escuro: texto sempre claro (contraste) */
+  color: var(--giz);
 }
 
 .player-view__phase {
@@ -41,6 +43,8 @@
   background: #161616;
   padding: 1.25rem;
   border-radius: var(--radius-md);
+  /* fundo escuro: texto sempre claro (contraste) */
+  color: var(--giz);
 }
 
 .player-answer__question {

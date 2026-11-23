@@ -13,7 +13,7 @@ export default function PlayerView() {
   const { code } = useParams();
   const { user } = useAuth();
   const navigate = useNavigate();
-  const { match, playerView, question, careerClubs, answerKey, error, actions } = useRoom(code, "player");
+  const { match, playerView, question, careerClubs, skippedAnswer, answerKey, error, actions } = useRoom(code, "player");
   const [answer, setAnswer] = useState("");
   const prevButtonState = useRef<string | null>(null);
   const prevLastAnswerId = useRef<string | null>(null);
@@ -195,7 +195,10 @@ export default function PlayerView() {
         )}
 
         {match.lastAnswer?.skipped && (
-          <p className="player-view__note">Pergunta pulada de comum acordo -- ninguem pontuou.</p>
+          <p className="player-view__note">
+            Pergunta pulada de comum acordo -- ninguem pontuou.
+            {skippedAnswer && <> Resposta: <strong style={{ color: "var(--lima)" }}>{skippedAnswer}</strong></>}
+          </p>
         )}
 
         {playerView.myButtonState === "armed" && !buzz?.firstPlayerId && (

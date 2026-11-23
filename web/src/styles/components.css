@@ -233,3 +233,10 @@
   text-align: center;
   gap: 1.25rem;
 }
+
+/* Botao ghost dentro de caixa escura que esta num painel claro: volta a
+   ter texto claro, para nunca ficar escuro sobre escuro. */
+.panel :is(.panel-dark, .solo-feedback, .player-answer) .btn-ghost {
+  color: var(--giz);
+  border-color: var(--giz);
+}

@@ -66,6 +66,8 @@
   background: #1c1c1c;
   padding: 0.5em 0.9em;
   border-radius: 8px;
+  /* fundo escuro: texto sempre claro (contraste) */
+  color: var(--giz);
 }
 
 .answer-key {

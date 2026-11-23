@@ -62,7 +62,12 @@ export interface ClientToServerEvents {
 export interface ServerToClientEvents {
   "room:state": (payload: { match: MatchState }) => void;
   /** Public view of the current question/career clubs, safe for screen and players. */
-  "room:question": (payload: { question: PublicQuestion | null; careerClubs: string[] | null }) => void;
+  "room:question": (payload: {
+    question: PublicQuestion | null;
+    careerClubs: string[] | null;
+    /** Resposta certa, enviada a todos so depois que a pergunta foi pulada. */
+    skippedAnswer?: string | null;
+  }) => void;
   /** Host-only: the answer key for the current question/career, to judge against. */
   "host:answerKey": (payload: { question: HostQuestionView | null; careerPlayerName: string | null }) => void;
   "player:view": (payload: PlayerView) => void;

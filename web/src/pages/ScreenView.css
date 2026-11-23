@@ -5,6 +5,8 @@
   flex-direction: column;
   background: var(--escama);
   overflow: hidden;
+  /* fundo escuro: texto sempre claro (contraste) */
+  color: var(--giz);
 }
 
 .screen-shell__bg {

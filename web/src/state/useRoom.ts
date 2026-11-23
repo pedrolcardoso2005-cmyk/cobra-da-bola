@@ -14,6 +14,7 @@ export function useRoom(code: string | undefined, role: RoomRole) {
   const [match, setMatch] = useState<MatchState | null>(null);
   const [question, setQuestion] = useState<PublicQuestion | null>(null);
   const [careerClubs, setCareerClubs] = useState<string[] | null>(null);
+  const [skippedAnswer, setSkippedAnswer] = useState<string | null>(null);
   const [answerKey, setAnswerKey] = useState<{ question: HostQuestionView | null; careerPlayerName: string | null } | null>(null);
   const [playerView, setPlayerView] = useState<PlayerView | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -27,7 +28,8 @@ export function useRoom(code: string | undefined, role: RoomRole) {
     function onState(payload: { match: MatchState }) {
       setMatch(payload.match);
     }
-    function onQuestion(payload: { question: PublicQuestion | null; careerClubs: string[] | null }) {
+    function onQuestion(payload: { question: PublicQuestion | null; careerClubs: string[] | null; skippedAnswer?: string | null }) {
+      setSkippedAnswer(payload.skippedAnswer ?? null);
       setQuestion(payload.question);
       setCareerClubs(payload.careerClubs);
     }
@@ -64,7 +66,7 @@ export function useRoom(code: string | undefined, role: RoomRole) {
 
   const actions = useActions(socketRef.current, code);
 
-  return { match, question, careerClubs, answerKey, playerView, error, joined, actions };
+  return { match, question, careerClubs, skippedAnswer, answerKey, playerView, error, joined, actions };
 }
 
 function useActions(socket: ReturnType<typeof getSocket>, code: string | undefined) {

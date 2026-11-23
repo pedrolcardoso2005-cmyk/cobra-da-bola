@@ -216,6 +216,7 @@ function broadcastRoom(io: Server<ClientToServerEvents, ServerToClientEvents, Re
   io.to(match.code).emit("room:question", {
     question: question ? toPublicQuestion(question) : null,
     careerClubs: careerClubsRevealed(careerQuestion, match.career?.revealedClubCount ?? 0),
+    skippedAnswer: match.lastAnswer?.skipped && question ? question.correctAnswer : null,
   });
 
   io.to(`${match.code}:host`).emit("host:answerKey", {
