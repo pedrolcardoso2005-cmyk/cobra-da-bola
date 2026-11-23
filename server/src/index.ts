@@ -12,10 +12,12 @@ import { questionsRouter } from "./questions/routes.js";
 import { rankingRouter } from "./ranking/routes.js";
 import { roomsRouter } from "./game/routes.js";
 import { soloRouter } from "./solo/routes.js";
+import { adminRouter } from "./admin/routes.js";
 import { registerSocketHandlers } from "./realtime/socket.js";
 import { canonicalHostMiddleware } from "./http/canonicalHost.js";
 import { seedDatabase } from "./questions/seed.js";
 import { loadQuestionBank } from "./questions/bank/index.js";
+import { loadCareerBank } from "./questions/careers/index.js";
 import { loadAiQuestionsConfig } from "./questions/ai/config.js";
 import { checkAndTopUp, logTopUpSummary } from "./questions/ai/stock.js";
 import { DB_PATH } from "./db/db.js";
@@ -26,6 +28,12 @@ const bankResult = loadQuestionBank();
 if (bankResult.inserted > 0) {
   // eslint-disable-next-line no-console
   console.log(`Banco de perguntas: ${bankResult.inserted} novas, ${bankResult.skipped} ja existiam (total no banco ate agora: ${bankResult.total}).`);
+}
+
+const careerResult = loadCareerBank();
+if (careerResult.inserted > 0) {
+  // eslint-disable-next-line no-console
+  console.log(`Banco de carreiras: ${careerResult.inserted} novas, ${careerResult.skipped} ja existiam (total no banco de carreiras: ${careerResult.total}).`);
 }
 
 // Persistence diagnostic (see auditoria de persistencia): logs the exact
@@ -80,6 +88,7 @@ app.use("/api/perguntas", questionsRouter);
 app.use("/api/ranking", rankingRouter);
 app.use("/api/salas", roomsRouter);
 app.use("/api/solo", soloRouter);
+app.use("/api/admin", adminRouter);
 
 // In production, the web app is built and served from the same process
 // (see server/ENV_SETUP.md / deploy notes) so there's a single Railway

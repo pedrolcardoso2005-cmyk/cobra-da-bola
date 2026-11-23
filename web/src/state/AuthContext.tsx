@@ -1,3 +1,4 @@
+import { clearToken, getToken, setToken } from "../lib/tokenStore";
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 import { api, ApiError } from "../lib/api";
 import { disconnectSocket } from "../lib/socket";
@@ -14,6 +15,7 @@ export interface AuthUser {
   matchesLost: number;
   winStreak: number;
   bestWinStreak: number;
+  isAdmin?: boolean;
 }
 
 interface AuthContextValue {
@@ -32,7 +34,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   const refresh = useCallback(async () => {
-    const token = sessionStorage.getItem("cobra_token");
+    const token = getToken();
     if (!token) {
       setUser(null);
       setLoading(false);
@@ -43,7 +45,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUser(data.user);
     } catch (err) {
       if (err instanceof ApiError && err.status === 401) {
-        sessionStorage.removeItem("cobra_token");
+        clearToken();
       }
       setUser(null);
     } finally {
@@ -57,18 +59,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const login = useCallback(async (email: string, password: string) => {
     const data = await api.post<{ token: string; user: AuthUser }>("/api/auth/login", { email, password });
-    sessionStorage.setItem("cobra_token", data.token);
+    setToken(data.token);
     setUser(data.user);
   }, []);
 
   const register = useCallback(async (email: string, password: string, displayName: string) => {
     const data = await api.post<{ token: string; user: AuthUser }>("/api/auth/registrar", { email, password, displayName });
-    sessionStorage.setItem("cobra_token", data.token);
+    setToken(data.token);
     setUser(data.user);
   }, []);
 
   const logout = useCallback(() => {
-    sessionStorage.removeItem("cobra_token");
+    clearToken();
     disconnectSocket();
     setUser(null);
   }, []);

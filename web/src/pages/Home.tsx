@@ -2,8 +2,7 @@ import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../state/AuthContext";
 import { getSocket } from "../lib/socket";
-import { CAREER_THEME_LABELS, CATEGORY_LABELS, DIFFICULTIES } from "../lib/labels";
-import { ANSWER_SECONDS_OPTIONS, type AnswerSeconds, type CareerTheme, type Difficulty, type QuestionCategory } from "@cobra/shared";
+import { ANSWER_SECONDS_OPTIONS, type AnswerSeconds } from "@cobra/shared";
 import "./Home.css";
 
 const PARTICIPANT_COUNTS = [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
@@ -13,28 +12,16 @@ export default function Home() {
   const navigate = useNavigate();
   const [answerSeconds, setAnswerSeconds] = useState<AnswerSeconds>(20);
   const [targetCount, setTargetCount] = useState(4);
-  const [categories, setCategories] = useState<QuestionCategory[]>(["aleatorio"]);
-  const [difficulties, setDifficulties] = useState<Difficulty[]>([]);
-  const [careerThemes, setCareerThemes] = useState<CareerTheme[]>(["aleatorio"]);
   const [joinCode, setJoinCode] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
-
-  function toggleCategory(cat: QuestionCategory) {
-    setCategories((prev) => (prev.includes(cat) ? prev.filter((c) => c !== cat) : [...prev, cat]));
-  }
-  function toggleDifficulty(d: Difficulty) {
-    setDifficulties((prev) => (prev.includes(d) ? prev.filter((x) => x !== d) : [...prev, d]));
-  }
-  function toggleCareerTheme(t: CareerTheme) {
-    setCareerThemes((prev) => (prev.includes(t) ? prev.filter((x) => x !== t) : [...prev, t]));
-  }
 
   function createRoom() {
     setCreating(true);
     setError(null);
     const socket = getSocket();
-    socket.emit("room:create", { answerSeconds, categories, difficulties, careerThemes, targetCount }, (res) => {
+    // Sem escolha de tema/dificuldade: sempre sorteia do banco inteiro.
+    socket.emit("room:create", { answerSeconds, categories: ["aleatorio"], difficulties: [], careerThemes: ["aleatorio"], targetCount }, (res) => {
       setCreating(false);
       if (res.ok) navigate(`/sala/${res.code}/jogador`);
       else setError(res.error);
@@ -55,6 +42,7 @@ export default function Home() {
           <Link className="btn btn-ghost" to="/perfil">Perfil</Link>
           <Link className="btn btn-ghost" to="/ranking">Ranking</Link>
           <Link className="btn btn-ghost" to="/historico">Meu historico</Link>
+          {user?.isAdmin && <Link className="btn btn-ghost" to="/admin">Admin</Link>}
           <button className="btn btn-ghost" onClick={logout}>Sair</button>
         </nav>
       </header>
@@ -114,47 +102,7 @@ export default function Home() {
               ))}
             </select>
           </div>
-          <div className="field">
-            <label>Tema (nenhum selecionado = aleatorio)</label>
-            <div className="chip-grid">
-              {(Object.keys(CATEGORY_LABELS) as QuestionCategory[]).map((cat) => (
-                <button
-                  type="button"
-                  key={cat}
-                  className={`chip ${categories.includes(cat) ? "is-active" : ""}`}
-                  onClick={() => toggleCategory(cat)}
-                >
-                  {CATEGORY_LABELS[cat]}
-                </button>
-              ))}
-            </div>
-          </div>
-          <div className="field">
-            <label>Dificuldades (nenhuma = todas)</label>
-            <div className="chip-grid">
-              {DIFFICULTIES.map((d) => (
-                <button type="button" key={d} className={`chip ${difficulties.includes(d) ? "is-active" : ""}`} onClick={() => toggleDifficulty(d)}>
-                  {d}
-                </button>
-              ))}
-            </div>
-          </div>
-          <div className="field">
-            <label>Tema do Desafio das Carreiras</label>
-            <div className="chip-grid">
-              {(Object.keys(CAREER_THEME_LABELS) as CareerTheme[]).map((t) => (
-                <button
-                  type="button"
-                  key={t}
-                  className={`chip ${careerThemes.includes(t) ? "is-active" : ""}`}
-                  onClick={() => toggleCareerTheme(t)}
-                >
-                  {CAREER_THEME_LABELS[t]}
-                </button>
-              ))}
-            </div>
-          </div>
-          {error && <span className="error-text">{error}</span>}
+          {error &&<span className="error-text">{error}</span>}
           <button className="btn btn-primary btn-block" onClick={createRoom} disabled={creating}>
             {creating ? "Criando sala..." : "Criar sala"}
           </button>

@@ -12,6 +12,7 @@ import { roomManager } from "../game/rooms.js";
 import { matchmakingManager } from "../game/matchmaking.js";
 import { EngineError } from "../game/engine.js";
 import { buildPlayerView, careerClubsRevealed, toHostQuestionView, toPublicQuestion } from "../game/view.js";
+import { socketClosed, socketOpened } from "../admin/presence.js";
 
 interface SocketData {
   userId: string;
@@ -42,21 +43,25 @@ export function registerSocketHandlers(io: Server<ClientToServerEvents, ServerTo
   roomManager.on("update", (match: MatchState) => broadcastRoom(io, match));
 
   io.on("connection", (socket: AppSocket) => {
+    socketOpened(socket.data.userId);
+    socket.on("disconnect", () => socketClosed(socket.data.userId));
     socket.on("room:create", (payload, ack) => {
       try {
         const schema = z.object({
           answerSeconds: z.number().refine((v) => (ANSWER_SECONDS_OPTIONS as number[]).includes(v)),
-          categories: z.array(z.string()).min(0),
-          difficulties: z.array(z.string()).min(0),
+          categories: z.array(z.string()).min(0).optional(),
+          difficulties: z.array(z.string()).min(0).optional(),
           careerThemes: z.array(z.string()).min(0).optional(),
           targetCount: z.number().int().min(2).max(12),
         });
         const parsed = schema.parse(payload);
         const room = roomManager.createRoom(socket.data.userId, {
           answerSeconds: parsed.answerSeconds as any,
-          categories: parsed.categories as any,
-          difficulties: parsed.difficulties as any,
-          careerThemes: parsed.careerThemes as any,
+          // Tema e dificuldade nao sao mais escolhidos: toda partida sorteia
+          // do banco inteiro, mesmo que um cliente antigo mande filtros.
+          categories: ["aleatorio"],
+          difficulties: [],
+          careerThemes: ["aleatorio"],
           kind: "casual",
           targetCount: parsed.targetCount,
         });

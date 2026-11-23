@@ -4,6 +4,7 @@ Disallow: /api/
 Disallow: /sala/
 Disallow: /perfil
 Disallow: /historico
+Disallow: /admin
 Disallow: /ranking
 Disallow: /sozinho
 Disallow: /redefinir-senha

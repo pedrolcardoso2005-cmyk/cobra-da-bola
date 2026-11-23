@@ -2,8 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { useAuth } from "../state/AuthContext";
 import { api } from "../lib/api";
-import { CAREER_THEME_LABELS, CATEGORY_LABELS, DIFFICULTIES } from "../lib/labels";
-import { REVEAL_WORD_MS, type CareerTheme, type Difficulty, type PublicQuestion, type QuestionCategory } from "@cobra/shared";
+import { REVEAL_WORD_MS, type PublicQuestion } from "@cobra/shared";
 import { SoloCharacter } from "../components/SoloCharacter";
 import { Fireworks } from "../components/scenes/Fireworks";
 import "../components/CareerBoard.css";
@@ -37,9 +36,6 @@ interface CareerAnswerResult {
 export default function SoloView() {
   const { user } = useAuth();
   const [mode, setMode] = useState<"perguntas" | "carreiras">("perguntas");
-  const [categories, setCategories] = useState<QuestionCategory[]>(["aleatorio"]);
-  const [careerThemes, setCareerThemes] = useState<CareerTheme[]>(["aleatorio"]);
-  const [difficulties, setDifficulties] = useState<Difficulty[]>([]);
 
   const [question, setQuestion] = useState<PublicQuestion | null>(null);
   const [seenQuestionIds, setSeenQuestionIds] = useState<string[]>([]);
@@ -82,24 +78,12 @@ export default function SoloView() {
   const [careerEmpty, setCareerEmpty] = useState(false);
   const [questionEmpty, setQuestionEmpty] = useState(false);
 
-  function toggleCategory(cat: QuestionCategory) {
-    setCategories((prev) => (prev.includes(cat) ? prev.filter((c) => c !== cat) : [...prev, cat]));
-  }
-  function toggleCareerTheme(t: CareerTheme) {
-    setCareerThemes((prev) => (prev.includes(t) ? prev.filter((x) => x !== t) : [...prev, t]));
-  }
-  function toggleDifficulty(d: Difficulty) {
-    setDifficulties((prev) => (prev.includes(d) ? prev.filter((x) => x !== d) : [...prev, d]));
-  }
-
   async function loadNextQuestion(excludeIds: string[]) {
     setLoading(true);
     setResult(null);
     setAnswer("");
     try {
       const qs = new URLSearchParams({
-        categories: categories.join(","),
-        difficulties: difficulties.join(","),
         excludeIds: excludeIds.join(","),
       });
       const data = await api.get<{ question: PublicQuestion | null }>(`/api/solo/pergunta?${qs}`);
@@ -155,8 +139,6 @@ export default function SoloView() {
     setRevealedCount(1);
     try {
       const qs = new URLSearchParams({
-        themes: careerThemes.join(","),
-        difficulties: difficulties.join(","),
         excludeIds: excludeIds.join(","),
       });
       const data = await api.get<{ career: PublicCareer | null }>(`/api/solo/carreira?${qs}`);
@@ -225,39 +207,7 @@ export default function SoloView() {
       <main className="solo-main">
         <section className="panel sticker home-card solo-config">
           <h2 className="font-display">Configuracao</h2>
-          {mode === "perguntas" ? (
-            <div className="field">
-              <label>Tema (nenhum selecionado = aleatorio)</label>
-              <div className="chip-grid">
-                {(Object.keys(CATEGORY_LABELS) as QuestionCategory[]).map((cat) => (
-                  <button type="button" key={cat} className={`chip ${categories.includes(cat) ? "is-active" : ""}`} onClick={() => toggleCategory(cat)}>
-                    {CATEGORY_LABELS[cat]}
-                  </button>
-                ))}
-              </div>
-            </div>
-          ) : (
-            <div className="field">
-              <label>Tema do Desafio das Carreiras</label>
-              <div className="chip-grid">
-                {(Object.keys(CAREER_THEME_LABELS) as CareerTheme[]).map((t) => (
-                  <button type="button" key={t} className={`chip ${careerThemes.includes(t) ? "is-active" : ""}`} onClick={() => toggleCareerTheme(t)}>
-                    {CAREER_THEME_LABELS[t]}
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-          <div className="field">
-            <label>Dificuldades (nenhuma = todas)</label>
-            <div className="chip-grid">
-              {DIFFICULTIES.map((d) => (
-                <button type="button" key={d} className={`chip ${difficulties.includes(d) ? "is-active" : ""}`} onClick={() => toggleDifficulty(d)}>
-                  {d}
-                </button>
-              ))}
-            </div>
-          </div>
+          <p>Perguntas e carreiras sorteadas de todo o banco.</p>
           {mode === "perguntas" ? (
             <button className="btn btn-primary btn-block" onClick={startQuestions} disabled={loading}>
               {loading ? "Carregando..." : question ? "Reiniciar" : "Comecar"}

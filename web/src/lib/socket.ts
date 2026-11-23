@@ -1,3 +1,4 @@
+import { getToken } from "./tokenStore";
 import { io, type Socket } from "socket.io-client";
 import { SOCKET_PATH, type ClientToServerEvents, type ServerToClientEvents } from "@cobra/shared";
 import { API_BASE_URL } from "./api";
@@ -8,7 +9,7 @@ let socket: AppSocket | null = null;
 
 export function getSocket(): AppSocket {
   if (socket) return socket;
-  const token = sessionStorage.getItem("cobra_token");
+  const token = getToken();
   // An empty API_BASE_URL means "same origin" (production); socket.io-client
   // needs that passed as undefined, not "", to connect to the current host.
   socket = io(API_BASE_URL || undefined, {

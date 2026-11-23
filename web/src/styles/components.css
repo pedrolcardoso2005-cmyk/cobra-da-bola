@@ -107,6 +107,14 @@
   color: var(--giz);
 }
 
+/* .btn-ghost is drawn for the dark page background (light text, no fill).
+   Inside a light .panel that made it white-on-white -- the "Pular" buttons
+   looked like blank white boxes. On light panels, use dark text/border. */
+.panel:not(.panel-dark) .btn-ghost {
+  color: var(--escama);
+  border-color: var(--escama);
+}
+
 .error-text {
   color: var(--bote);
   font-weight: 700;

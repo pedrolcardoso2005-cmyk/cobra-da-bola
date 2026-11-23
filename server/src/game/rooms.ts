@@ -33,6 +33,17 @@ class RoomManager extends EventEmitter {
     return room;
   }
 
+  /** Live numbers for the admin panel. */
+  stats(): { rooms: number; playing: number; players: number } {
+    let playing = 0;
+    let players = 0;
+    for (const room of this.rooms.values()) {
+      if (room.match.phase !== "lobby" && room.match.phase !== "champion") playing++;
+      if (room.match.phase !== "champion") players += room.match.players.length;
+    }
+    return { rooms: this.rooms.size, playing, players };
+  }
+
   getRoom(code: string): RoomRuntime | undefined {
     return this.rooms.get(code.toUpperCase());
   }

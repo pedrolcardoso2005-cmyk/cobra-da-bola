@@ -1,3 +1,4 @@
+import { clearToken, getToken, setToken } from "./tokenStore";
 // Dev keeps talking to the server on :8787 unless overridden. Production
 // builds default to "" (same origin) since the server serves this build
 // itself; set VITE_API_URL explicitly only if the API lives elsewhere.
@@ -12,7 +13,7 @@ export class ApiError extends Error {
 }
 
 async function request<T>(path: string, opts: RequestInit = {}): Promise<T> {
-  const token = sessionStorage.getItem("cobra_token");
+  const token = getToken();
   const headers: Record<string, string> = { "Content-Type": "application/json", ...(opts.headers as any) };
   if (token) headers.Authorization = `Bearer ${token}`;
   const res = await fetch(`${API_BASE}${path}`, { ...opts, headers });

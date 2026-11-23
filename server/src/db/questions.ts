@@ -505,6 +505,33 @@ export function insertCareerQuestion(c: Omit<CareerQuestion, "id">): CareerQuest
   return rowToCareer(db.prepare("SELECT * FROM career_questions WHERE id = ?").get(id) as unknown as CareerRow);
 }
 
+/** Insert a career from the permanent career bank under a stable id (its
+ * slug). Skips it if that id already exists, or if a career for the same
+ * player (case/accent-insensitive) is already in the table -- so the 13
+ * original seed players are never duplicated. */
+export function insertBankCareer(id: string, c: Omit<CareerQuestion, "id">): "inserted" | "skipped" {
+  if (db.prepare("SELECT 1 FROM career_questions WHERE id = ?").get(id)) return "skipped";
+  const norm = (s: string) => s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().trim();
+  const target = norm(c.playerName);
+  const names = db.prepare("SELECT player_name FROM career_questions").all() as unknown as { player_name: string }[];
+  if (names.some((r) => norm(r.player_name) === target)) return "skipped";
+  db.prepare(
+    `INSERT INTO career_questions (id, clubs_json, player_name, accepted_answers_json, created_at, theme, difficulty, source_url, season_ref)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+  ).run(
+    id,
+    JSON.stringify(c.clubs),
+    c.playerName,
+    c.acceptedAnswers ? JSON.stringify(c.acceptedAnswers) : null,
+    Date.now(),
+    c.theme ?? null,
+    c.difficulty ?? null,
+    c.sourceUrl ?? null,
+    c.seasonRef ?? null,
+  );
+  return "inserted";
+}
+
 /** No status filter given -> only "approved", same convention as
  * listQuestions (every pre-existing row defaults to 'approved'). */
 export function listCareerQuestions(filter: { status?: QuestionStatus } = {}): CareerQuestion[] {

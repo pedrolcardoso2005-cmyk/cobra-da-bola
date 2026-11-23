@@ -5,6 +5,7 @@ import { createUser, findUserByEmail, findUserById, updatePassword, updateUserPr
 import { hashPassword, signToken, verifyPassword, verifyToken } from "./auth.js";
 import { sendPasswordResetEmail } from "./mailer.js";
 import { db } from "../db/db.js";
+import { touchUser } from "../admin/presence.js";
 
 export const authRouter = Router();
 
@@ -99,6 +100,7 @@ export function requireAuth(req: any, res: any, next: any) {
   const user = findUserById(payload.sub);
   if (!user) return res.status(401).json({ error: "Usuario nao encontrado" });
   req.user = user;
+  touchUser(user.id);
   next();
 }
 
@@ -116,8 +118,12 @@ const ADMIN_EMAILS = (process.env.ADMIN_EMAILS ?? "")
  * admin -- the AI review/generation routes (review-routes.ts) must never
  * be reachable by a regular player, only by someone listed in
  * ADMIN_EMAILS or flagged is_admin=1 in the database. */
+export function isAdminUser(user: { is_admin?: number; email?: string } | null | undefined): boolean {
+  return user?.is_admin === 1 || ADMIN_EMAILS.includes(String(user?.email ?? "").toLowerCase());
+}
+
 export function requireAdmin(req: any, res: any, next: any) {
-  const isAdmin = req.user?.is_admin === 1 || ADMIN_EMAILS.includes(String(req.user?.email ?? "").toLowerCase());
+  const isAdmin = isAdminUser(req.user);
   if (!isAdmin) return res.status(403).json({ error: "Acesso restrito a administradores" });
   next();
 }
@@ -151,5 +157,6 @@ function publicUser(user: ReturnType<typeof findUserById> & object) {
     matchesLost: user!.matches_lost,
     winStreak: user!.win_streak,
     bestWinStreak: user!.best_win_streak,
+    isAdmin: isAdminUser(user as any),
   };
 }

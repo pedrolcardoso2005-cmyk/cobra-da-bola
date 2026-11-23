@@ -6,7 +6,7 @@
 // already stored and approved (same pool the game itself reads from).
 import { Router } from "express";
 import { z } from "zod";
-import { answersMatch, type CareerTheme, type Difficulty, type QuestionCategory } from "@cobra/shared";
+import { answersMatch } from "@cobra/shared";
 import { requireAuth } from "../auth/routes.js";
 import {
   getApprovedCareerById,
@@ -41,10 +41,9 @@ soloRouter.get("/historico", requireAuth, (req: any, res) => {
 });
 
 soloRouter.get("/pergunta", requireAuth, (req, res) => {
-  const categories = csv(req.query.categories) as QuestionCategory[];
-  const difficulties = csv(req.query.difficulties) as Difficulty[];
+  // Sem filtro de tema/dificuldade: sorteia do banco inteiro.
   const excludeIds = csv(req.query.excludeIds);
-  const q = pickRandomQuestion({ categories, difficulties, excludeIds });
+  const q = pickRandomQuestion({ categories: ["aleatorio"], difficulties: [], excludeIds });
   res.json({ question: q ? toPublicQuestion(q) : null });
 });
 
@@ -76,10 +75,8 @@ soloRouter.post("/pergunta/pular", requireAuth, (req: any, res) => {
 });
 
 soloRouter.get("/carreira", requireAuth, (req, res) => {
-  const themes = csv(req.query.themes) as CareerTheme[];
-  const difficulties = csv(req.query.difficulties) as Difficulty[];
   const excludeIds = csv(req.query.excludeIds);
-  const c = pickRandomCareerQuestion({ themes, difficulties, excludeIds });
+  const c = pickRandomCareerQuestion({ themes: ["aleatorio"], difficulties: [], excludeIds });
   res.json({ career: c ? toPublicCareer(c) : null });
 });
 

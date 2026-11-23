@@ -15,6 +15,7 @@ import SoloView from "./pages/SoloView";
 import PlayerView from "./pages/PlayerView";
 import ScreenView from "./pages/ScreenView";
 import HostView from "./pages/HostView";
+import Admin from "./pages/Admin";
 
 function RequireAuth({ children }: { children: React.ReactElement }) {
   const { user, loading } = useAuth();
@@ -55,6 +56,7 @@ export default function App() {
       <Route path="/sozinho" element={<RequireAuth><SoloView /></RequireAuth>} />
       <Route path="/perfil" element={<RequireAuth><Profile /></RequireAuth>} />
       <Route path="/ranking" element={<RequireAuth><Ranking /></RequireAuth>} />
+      <Route path="/admin" element={<RequireAuth><Admin /></RequireAuth>} />
       <Route path="/historico" element={<RequireAuth><SoloHistory /></RequireAuth>} />
 
       <Route path="/sala/:code" element={<RequireAuth><RoomEntry /></RequireAuth>} />
