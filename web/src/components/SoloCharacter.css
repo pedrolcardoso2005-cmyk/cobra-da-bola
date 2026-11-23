@@ -23,37 +23,39 @@
   overflow: visible;
 }
 
-.solo-character__torso {
-  fill: #8a5a34;
-  opacity: 0;
-}
-
-.solo-character__arm {
-  fill: #8a5a34;
+.solo-character__coil,
+.solo-character__neck,
+.solo-character__head {
+  fill: #2f9e44;
   stroke: var(--escama);
   stroke-width: 4;
 }
-
-.solo-character__shirt {
+.solo-character__belly {
+  fill: var(--lima);
+  opacity: 0.85;
+}
+.solo-character__spot {
+  fill: #1f6e2f;
+}
+.solo-character__ball circle {
   fill: var(--giz);
   stroke: var(--escama);
-  stroke-width: 4;
+  stroke-width: 3;
 }
-.solo-character__shirt-trim {
-  fill: var(--lima);
-  stroke: var(--escama);
-  stroke-width: 4;
+.solo-character__ball polygon {
+  fill: var(--escama);
 }
-
-.solo-character__head {
-  fill: #8a5a34;
-  stroke: var(--escama);
+.solo-character__tongue {
+  fill: none;
+  stroke: #e03131;
   stroke-width: 4;
+  stroke-linecap: round;
+  transform-origin: 100px 126px;
+  animation: solo-tongue-flick 1.4s ease-in-out infinite;
 }
-.solo-character__hair {
-  fill: #1c140d;
-  stroke: var(--escama);
-  stroke-width: 2.5;
+@keyframes solo-tongue-flick {
+  0%, 60%, 100% { transform: scaleY(0); }
+  70%, 90% { transform: scaleY(1); }
 }
 
 .solo-character__eye-white {
@@ -63,11 +65,6 @@
 }
 .solo-character__pupil {
   fill: var(--escama);
-}
-
-.solo-character__glasses rect {
-  fill: var(--escama);
-  opacity: 0.92;
 }
 
 .solo-character__mouth {

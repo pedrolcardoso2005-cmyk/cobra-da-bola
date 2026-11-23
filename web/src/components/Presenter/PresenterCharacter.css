@@ -28,31 +28,35 @@
   opacity: 0.35;
 }
 
-.presenter__jersey {
-  fill: #141c3a;
+.presenter__coil {
+  fill: #2f9e44;
   stroke: var(--escama);
   stroke-width: 4;
 }
-.presenter__jersey-trim {
+.presenter__belly {
   fill: var(--lima);
-  stroke: var(--escama);
-  stroke-width: 4;
+  opacity: 0.85;
 }
-.presenter__crest {
-  fill: var(--bote);
-  stroke: var(--escama);
-  stroke-width: 2.5;
+.presenter__tail {
+  fill: none;
+  stroke: #2f9e44;
+  stroke-width: 14;
+  stroke-linecap: round;
 }
-.presenter__arm,
-.presenter__leg {
-  fill: #141c3a;
-  stroke: var(--escama);
-  stroke-width: 4;
+.presenter__spot {
+  fill: #1f6e2f;
 }
-.presenter__shoe {
-  fill: var(--giz);
-  stroke: var(--escama);
+.presenter__tongue {
+  fill: none;
+  stroke: #e03131;
   stroke-width: 4;
+  stroke-linecap: round;
+  transform-origin: 110px 124px;
+  animation: presenter-tongue-flick 1.4s ease-in-out infinite;
+}
+@keyframes presenter-tongue-flick {
+  0%, 60%, 100% { transform: scaleY(0); }
+  70%, 90% { transform: scaleY(1); }
 }
 
 .presenter__card {
@@ -72,15 +76,9 @@
 }
 
 .presenter__head {
-  fill: #c98554;
+  fill: #2f9e44;
   stroke: var(--escama);
   stroke-width: 4;
-}
-.presenter__hair,
-.presenter__beard {
-  fill: #2a1d14;
-  stroke: var(--escama);
-  stroke-width: 2.5;
 }
 
 .presenter__eyebrow-left,
@@ -214,10 +212,10 @@
   }
 }
 .presenter--countdown .presenter__head {
-  fill: #c98554;
+  fill: #2f9e44;
   filter: drop-shadow(0 0 0 var(--bote));
 }
-.presenter--countdown .presenter__jersey-trim {
+.presenter--countdown .presenter__belly {
   fill: var(--bote);
 }
 .presenter--countdown .presenter__eyebrow-left {

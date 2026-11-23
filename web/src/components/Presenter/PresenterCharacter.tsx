@@ -29,11 +29,10 @@ const CAPTIONS: Record<PresenterState, string | null> = {
 };
 
 /**
- * Original mascot for "Quem e o Cobra da Bola?" -- built from scratch as
- * layered SVG (not a photo) specifically so mouth/eyebrow/body states can
- * be animated independently. Deliberately does not reproduce any real
- * club crest or brand mark; the jersey uses the game's own BOTE palette
- * and a fictional snake-fang crest instead.
+ * Mascote de "Quem e o Cobra da Bola?": uma cobra apresentadora, enrolada,
+ * segurando a plaquinha do jogo. SVG em camadas feito do zero, para que
+ * boca, sobrancelhas e corpo possam ser animados separadamente pelos
+ * estados no CSS.
  */
 export function PresenterCharacter({ state, countdownNumber }: { state: PresenterState; countdownNumber?: 3 | 2 | 1 }) {
   const [bounceKey, setBounceKey] = useState(0);
@@ -70,17 +69,16 @@ export function PresenterCharacter({ state, countdownNumber }: { state: Presente
           <ellipse cx="110" cy="300" rx="58" ry="10" />
         </g>
 
-        {/* body */}
+        {/* body: coiled snake */}
         <g className="presenter__body">
-          <rect x="62" y="150" width="96" height="110" rx="18" className="presenter__jersey" />
-          <rect x="62" y="150" width="96" height="26" rx="12" className="presenter__jersey-trim" />
-          <polygon points="110,178 122,200 110,222 98,200" className="presenter__crest" />
-          <rect x="30" y="160" width="34" height="90" rx="16" className="presenter__arm" />
-          <rect x="158" y="160" width="34" height="90" rx="16" className="presenter__arm" />
-          <rect x="78" y="250" width="28" height="60" rx="10" className="presenter__leg" />
-          <rect x="116" y="250" width="28" height="60" rx="10" className="presenter__leg" />
-          <rect x="70" y="300" width="42" height="16" rx="6" className="presenter__shoe" />
-          <rect x="110" y="300" width="42" height="16" rx="6" className="presenter__shoe" />
+          <ellipse cx="110" cy="290" rx="90" ry="22" className="presenter__coil" />
+          <ellipse cx="110" cy="260" rx="74" ry="20" className="presenter__coil" />
+          <ellipse cx="110" cy="232" rx="58" ry="18" className="presenter__coil" />
+          <ellipse cx="110" cy="290" rx="60" ry="8" className="presenter__belly" />
+          <ellipse cx="110" cy="260" rx="48" ry="7" className="presenter__belly" />
+          <rect x="84" y="126" width="52" height="110" rx="26" className="presenter__coil" />
+          <rect x="97" y="146" width="26" height="84" rx="13" className="presenter__belly" />
+          <path d="M 84 190 Q 50 196 46 176" className="presenter__tail" />
         </g>
 
         {/* card held up */}
@@ -93,9 +91,12 @@ export function PresenterCharacter({ state, countdownNumber }: { state: Presente
 
         {/* head */}
         <g className="presenter__head-group">
-          <circle cx="110" cy="96" r="54" className="presenter__head" />
-          <path d="M 64 78 Q 110 30 156 78 L 156 60 Q 110 20 64 60 Z" className="presenter__hair" />
-          <path d="M 86 118 Q 110 134 134 118 L 134 128 Q 110 142 86 128 Z" className="presenter__beard" />
+          <ellipse cx="110" cy="96" rx="62" ry="50" className="presenter__head" />
+          <circle cx="76" cy="66" r="5" className="presenter__spot" />
+          <circle cx="144" cy="66" r="5" className="presenter__spot" />
+          <circle cx="110" cy="56" r="6" className="presenter__spot" />
+          <circle cx="103" cy="104" r="2.5" className="presenter__pupil" />
+          <circle cx="117" cy="104" r="2.5" className="presenter__pupil" />
 
           <g className="presenter__eyebrow-left">
             <rect x="80" y="78" width="26" height="7" rx="3.5" />
@@ -106,17 +107,18 @@ export function PresenterCharacter({ state, countdownNumber }: { state: Presente
 
           <g className="presenter__eye-left">
             <circle cx="92" cy="94" r="9" className="presenter__eye-white" />
-            <circle cx="92" cy="94" r="4" className="presenter__pupil" />
+            <ellipse cx="92" cy="94" rx="3" ry="7" className="presenter__pupil" />
           </g>
           <g className="presenter__eye-right">
             <circle cx="128" cy="94" r="9" className="presenter__eye-white" />
-            <circle cx="128" cy="94" r="4" className="presenter__pupil" />
+            <ellipse cx="128" cy="94" rx="3" ry="7" className="presenter__pupil" />
           </g>
 
           <g className="presenter__mouth-group">
             <path className="presenter__mouth" />
             <ellipse cx="110" cy="114" rx="10" ry="13" className="presenter__mouth-shout" />
           </g>
+          <path d="M 110 124 L 110 144 M 110 144 L 102 152 M 110 144 L 118 152" className="presenter__tongue" />
         </g>
       </svg>
     </div>
