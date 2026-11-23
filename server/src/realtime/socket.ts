@@ -210,7 +210,7 @@ function errorMessage(err: unknown): string {
 function broadcastRoom(io: Server<ClientToServerEvents, ServerToClientEvents, Record<string, never>, SocketData>, match: MatchState) {
   const room = roomManager.getRoom(match.code);
   if (!room) return;
-  io.to(match.code).emit("room:state", { match });
+  io.to(match.code).emit("room:state", { match, serverNow: Date.now() });
 
   const currentQuestionId = match.phase1?.currentQuestionId ?? match.bracketRound?.currentQuestionId ?? null;
   const question = currentQuestionId ? room.questionCache.get(currentQuestionId) ?? null : null;

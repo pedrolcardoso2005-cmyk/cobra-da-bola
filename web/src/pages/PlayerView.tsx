@@ -1,3 +1,4 @@
+import { serverNow } from "../lib/clock";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useRoom } from "../state/useRoom";
@@ -8,7 +9,7 @@ import { sfx } from "../sound/sfx";
 import { REVEAL_WORD_MS, teamDisplayName } from "@cobra/shared";
 import { LiveScore } from "../components/LiveScore";
 import { Fireworks } from "../components/scenes/Fireworks";
-import { SoloCharacter } from "../components/SoloCharacter";
+import { ChampionCobra } from "../components/ChampionCobra";
 import "./PlayerView.css";
 
 export default function PlayerView() {
@@ -59,7 +60,7 @@ export default function PlayerView() {
     if (!questionOpenedAt) return 0; // buzzers not armed yet -- nothing to show
     if (frozenWordCount != null) return frozenWordCount;
     if (localFreeze != null) return localFreeze;
-    const elapsed = Date.now() - questionOpenedAt;
+    const elapsed = serverNow() - questionOpenedAt;
     return Math.max(1, Math.min(Math.floor(elapsed / REVEAL_WORD_MS) + 1, words.length));
   })();
   const revealInterrupted = frozenWordCount != null && frozenWordCount < words.length;
@@ -83,11 +84,11 @@ export default function PlayerView() {
   // e a tela conta os segundos sozinha.
   const timerEndsAt = match?.timer?.endsAt ?? null;
   const countdownEndsAt = match?.phase === "lobby" ? match?.countdownEndsAt ?? null : null;
-  const [now, setNow] = useState(() => Date.now());
+  const [now, setNow] = useState(() => serverNow());
   useEffect(() => {
     if (!timerEndsAt && !countdownEndsAt) return;
-    setNow(Date.now());
-    const id = setInterval(() => setNow(Date.now()), 250);
+    setNow(serverNow());
+    const id = setInterval(() => setNow(serverNow()), 250);
     return () => clearInterval(id);
   }, [timerEndsAt, countdownEndsAt]);
   const countdownLeft = countdownEndsAt ? Math.max(0, Math.ceil((countdownEndsAt - now) / 1000)) : null;
@@ -238,34 +239,7 @@ export default function PlayerView() {
   }
 
   if (match.phase === "champion") {
-    const won = match.winnerUserId === user?.id;
-    const winner = match.players.find((p) => p.userId === match.winnerUserId);
-    const f = match.final;
-    return (
-      <div className="center-page champion-party">
-        <div className="champion-party__fireworks" aria-hidden="true">
-          <div style={{ left: "15%", top: "18%" }}><Fireworks intense /></div>
-          <div style={{ left: "82%", top: "22%" }}><Fireworks intense /></div>
-          <div style={{ left: "30%", top: "70%" }}><Fireworks intense /></div>
-          <div style={{ left: "72%", top: "75%" }}><Fireworks intense /></div>
-          <div style={{ left: "50%", top: "10%" }}><Fireworks intense /></div>
-        </div>
-        <h1 className="font-display champion-party__title">
-          {won ? "Voce e o Cobra da Bola!" : `${winner?.displayName ?? "Temos um campeao"} e o Cobra da Bola!`}
-        </h1>
-        <div className="champion-party__snake">
-          <SoloCharacter state="champion" caption={null} />
-        </div>
-        {f && (
-          <p className="font-score champion-party__score">
-            {match.players.find((p) => p.id === f.playerAId)?.displayName} {f.scoreA} x {f.scoreB}{" "}
-            {match.players.find((p) => p.id === f.playerBId)?.displayName}
-          </p>
-        )}
-        <p>Voce: {self.correctAnswers} acertos - {self.wrongAnswers} erros</p>
-        <button className="btn btn-primary" onClick={() => navigate("/")}>Voltar ao inicio</button>
-      </div>
-    );
+    return <ChampionParty match={match} selfId={self.id} userId={user?.id ?? null} onExit={() => navigate("/")} />;
   }
 
   const canAnswer = playerView.canSubmitAnswer;
@@ -431,6 +405,70 @@ function RoundResult({ match, selfId, revealedAnswer }: { match: any; selfId: st
         </span>
       )}
       {!revealedAnswer && match.phase === "career" && !la.correct && <span> Os outros ainda podem tentar.</span>}
+    </div>
+  );
+}
+
+/** Festa do campeao: raios girando, chuva de confete, foguetes, naja dando
+ * o bote e o titulo tremendo. */
+function ChampionParty({ match, selfId, userId, onExit }: { match: any; selfId: string; userId: string | null; onExit: () => void }) {
+  const won = match.winnerUserId === userId;
+  const winner = match.players.find((p: any) => p.userId === match.winnerUserId);
+  const self = match.players.find((p: any) => p.id === selfId);
+  const f = match.final;
+  useEffect(() => {
+    sfx.play("champion");
+  }, []);
+  const confetti = useMemo(
+    () =>
+      Array.from({ length: 60 }, (_, i) => ({
+        left: `${(i * 37) % 100}%`,
+        delay: `${(i % 12) * 0.25}s`,
+        dur: `${2.2 + (i % 5) * 0.5}s`,
+        color: ["#d4f000", "#ff7a1a", "#f4f4ea", "#ff3b1f", "#8ceb7a"][i % 5],
+        rot: `${(i * 47) % 360}deg`,
+      })),
+    [],
+  );
+  const bursts = [
+    { left: "12%", top: "14%" },
+    { left: "88%", top: "18%" },
+    { left: "25%", top: "62%" },
+    { left: "78%", top: "66%" },
+    { left: "50%", top: "8%" },
+    { left: "8%", top: "42%" },
+    { left: "92%", top: "45%" },
+  ];
+  return (
+    <div className="champion-party">
+      <div className="champion-party__rays" aria-hidden="true" />
+      <div className="champion-party__confetti" aria-hidden="true">
+        {confetti.map((c, i) => (
+          <span key={i} style={{ left: c.left, animationDelay: c.delay, animationDuration: c.dur, background: c.color, rotate: c.rot }} />
+        ))}
+      </div>
+      <div className="champion-party__fireworks" aria-hidden="true">
+        {bursts.map((pos, i) => (
+          <div key={i} style={pos}>
+            <Fireworks intense />
+          </div>
+        ))}
+      </div>
+      <div className="champion-party__content">
+        <p className="champion-party__kicker font-display">{won ? "Campeao!" : "Temos um campeao"}</p>
+        <h1 className="font-display champion-party__title">
+          {won ? "Voce e o Cobra da Bola!" : `${winner?.displayName ?? "Alguem"} e o Cobra da Bola!`}
+        </h1>
+        <ChampionCobra />
+        {f && (
+          <p className="font-score champion-party__score">
+            {match.players.find((p: any) => p.id === f.playerAId)?.displayName} {f.scoreA} x {f.scoreB}{" "}
+            {match.players.find((p: any) => p.id === f.playerBId)?.displayName}
+          </p>
+        )}
+        <p className="champion-party__stats">Voce: {self?.correctAnswers ?? 0} acertos - {self?.wrongAnswers ?? 0} erros</p>
+        <button className="btn btn-primary" onClick={onExit}>Voltar ao inicio</button>
+      </div>
     </div>
   );
 }

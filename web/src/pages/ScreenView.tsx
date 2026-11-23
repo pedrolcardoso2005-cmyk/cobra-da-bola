@@ -1,3 +1,4 @@
+import { serverNow } from "../lib/clock";
 import { useEffect, useRef, useState } from "react";
 import { useParams } from "react-router-dom";
 import { useRoom } from "../state/useRoom";
@@ -28,7 +29,7 @@ export default function ScreenView() {
       return;
     }
     const id = setInterval(() => {
-      const remaining = match.timer!.endsAt! - Date.now();
+      const remaining = match.timer!.endsAt! - serverNow();
       if (remaining <= 0) {
         setCountdownN(null);
         return;

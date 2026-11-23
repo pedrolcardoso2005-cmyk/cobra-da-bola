@@ -13,6 +13,7 @@ import {
   getApprovedQuestionById,
   pickRandomCareerQuestion,
   pickRandomQuestion,
+  markSeen,
 } from "../db/questions.js";
 import { toPublicCareer, toPublicQuestion } from "../game/view.js";
 import { getSoloHistorySummary, recordSoloAnswer, type SoloKind, type SoloResult } from "../db/soloHistory.js";
@@ -40,10 +41,12 @@ soloRouter.get("/historico", requireAuth, (req: any, res) => {
   res.json(getSoloHistorySummary(req.user.id));
 });
 
-soloRouter.get("/pergunta", requireAuth, (req, res) => {
-  // Sem filtro de tema/dificuldade: sorteia do banco inteiro.
+soloRouter.get("/pergunta", requireAuth, (req: any, res) => {
+  // Sem filtro de tema/dificuldade: sorteia do banco inteiro, evitando o
+  // que este jogador ja viu (em qualquer partida ou no Modo Solo).
   const excludeIds = csv(req.query.excludeIds);
-  const q = pickRandomQuestion({ categories: ["aleatorio"], difficulties: [], excludeIds });
+  const q = pickRandomQuestion({ categories: ["aleatorio"], difficulties: [], excludeIds, avoidSeenBy: [req.user.id] });
+  if (q) markSeen([req.user.id], "q", q.id);
   res.json({ question: q ? toPublicQuestion(q) : null });
 });
 
@@ -74,9 +77,10 @@ soloRouter.post("/pergunta/pular", requireAuth, (req: any, res) => {
   res.json({ correctAnswer: q.correctAnswer, acceptedAnswers: q.acceptedAnswers, explanation: q.explanation ?? null });
 });
 
-soloRouter.get("/carreira", requireAuth, (req, res) => {
+soloRouter.get("/carreira", requireAuth, (req: any, res) => {
   const excludeIds = csv(req.query.excludeIds);
-  const c = pickRandomCareerQuestion({ themes: ["aleatorio"], difficulties: [], excludeIds });
+  const c = pickRandomCareerQuestion({ themes: ["aleatorio"], difficulties: [], excludeIds, avoidSeenBy: [req.user.id] });
+  if (c) markSeen([req.user.id], "c", c.id);
   res.json({ career: c ? toPublicCareer(c) : null });
 });
 

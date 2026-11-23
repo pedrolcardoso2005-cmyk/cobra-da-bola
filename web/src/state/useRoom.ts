@@ -1,3 +1,4 @@
+import { syncServerClock } from "../lib/clock";
 import { useCallback, useEffect, useRef, useState } from "react";
 import type {
   HostQuestionView,
@@ -26,7 +27,8 @@ export function useRoom(code: string | undefined, role: RoomRole) {
     if (!code) return;
     const socket = socketRef.current;
 
-    function onState(payload: { match: MatchState }) {
+    function onState(payload: { match: MatchState; serverNow?: number }) {
+      if (payload.serverNow) syncServerClock(payload.serverNow);
       setMatch(payload.match);
     }
     function onQuestion(payload: { question: PublicQuestion | null; careerClubs: string[] | null; revealedAnswer?: string | null }) {

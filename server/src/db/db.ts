@@ -209,6 +209,19 @@ CREATE INDEX IF NOT EXISTS idx_solo_answer_log_user ON solo_answer_log(user_id, 
 CREATE INDEX IF NOT EXISTS idx_solo_answer_log_session ON solo_answer_log(user_id, kind, session_id);
 `);
 
+// Perguntas e carreiras que cada jogador ja viu, para nao repetirem entre
+// partidas (nem no Modo Solo). kind: "q" = pergunta, "c" = carreira.
+db.exec(`
+CREATE TABLE IF NOT EXISTS seen_items (
+  user_id TEXT NOT NULL,
+  kind TEXT NOT NULL,
+  item_id TEXT NOT NULL,
+  seen_at INTEGER NOT NULL,
+  PRIMARY KEY (user_id, kind, item_id)
+);
+CREATE INDEX IF NOT EXISTS idx_seen_items_user ON seen_items(user_id, kind);
+`);
+
 // Anonymous site visits for the admin panel: one row per visitor per day
 // (Sao Paulo calendar day), with how many pages they opened. visitor_id is
 // a random id the browser keeps in localStorage -- no personal data.

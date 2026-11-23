@@ -413,10 +413,42 @@ export function countConsumptionSince(sinceTs: number): { category: QuestionCate
     .all(sinceTs) as unknown as { category: QuestionCategory; difficulty: Difficulty; count: number }[];
 }
 
+/** Marca que estes jogadores viram esta pergunta/carreira agora. */
+export function markSeen(userIds: string[], kind: "q" | "c", itemId: string, now = Date.now()): void {
+  const stmt = db.prepare(
+    "INSERT INTO seen_items (user_id, kind, item_id, seen_at) VALUES (?, ?, ?, ?) ON CONFLICT(user_id, kind, item_id) DO UPDATE SET seen_at = excluded.seen_at",
+  );
+  for (const u of new Set(userIds)) if (u) stmt.run(u, kind, itemId, now);
+}
+
+/** item_id -> ultima vez que ALGUM destes jogadores viu o item. */
+function lastSeenBy(userIds: string[], kind: "q" | "c"): Map<string, number> {
+  const out = new Map<string, number>();
+  const ids = [...new Set(userIds)].filter(Boolean);
+  if (ids.length === 0) return out;
+  const rows = db
+    .prepare(`SELECT item_id, MAX(seen_at) AS t FROM seen_items WHERE kind = ? AND user_id IN (${ids.map(() => "?").join(",")}) GROUP BY item_id`)
+    .all(kind, ...ids) as unknown as { item_id: string; t: number }[];
+  for (const r of rows) out.set(r.item_id, r.t);
+  return out;
+}
+
+/** Sorteia evitando o que os jogadores ja viram; se ja viram tudo, sorteia
+ * entre os vistos ha mais tempo. */
+function pickFresh<T extends { id: string }>(pool: T[], seen: Map<string, number>): T | null {
+  if (pool.length === 0) return null;
+  const fresh = pool.filter((x) => !seen.has(x.id));
+  if (fresh.length > 0) return fresh[Math.floor(Math.random() * fresh.length)];
+  const oldest = [...pool].sort((a, b) => (seen.get(a.id) ?? 0) - (seen.get(b.id) ?? 0)).slice(0, Math.max(1, Math.ceil(pool.length / 10)));
+  return oldest[Math.floor(Math.random() * oldest.length)];
+}
+
 export function pickRandomQuestion(opts: {
   categories: QuestionCategory[];
   difficulties: Difficulty[];
   excludeIds: string[];
+  /** Jogadores cujas perguntas ja vistas devem ser evitadas. */
+  avoidSeenBy?: string[];
 }): Question | null {
   const wantsRandomCategory = opts.categories.length === 0 || opts.categories.includes("aleatorio");
   const all = listQuestions();
@@ -426,8 +458,7 @@ export function pickRandomQuestion(opts: {
     if (opts.difficulties.length > 0 && !opts.difficulties.includes(q.difficulty)) return false;
     return true;
   });
-  if (pool.length === 0) return null;
-  return pool[Math.floor(Math.random() * pool.length)];
+  return pickFresh(pool, lastSeenBy(opts.avoidSeenBy ?? [], "q"));
 }
 
 /** Single approved question by id -- used by solo mode to judge an answer
@@ -557,6 +588,7 @@ export function pickRandomCareerQuestion(opts: {
   themes: CareerTheme[];
   difficulties: Difficulty[];
   excludeIds: string[];
+  avoidSeenBy?: string[];
 }): CareerQuestion | null {
   const wantsRandomTheme = opts.themes.length === 0 || opts.themes.includes("aleatorio");
   const pool = listCareerQuestions().filter((c) => {
@@ -565,8 +597,7 @@ export function pickRandomCareerQuestion(opts: {
     if (opts.difficulties.length > 0 && (!c.difficulty || !opts.difficulties.includes(c.difficulty))) return false;
     return true;
   });
-  if (pool.length === 0) return null;
-  return pool[Math.floor(Math.random() * pool.length)];
+  return pickFresh(pool, lastSeenBy(opts.avoidSeenBy ?? [], "c"));
 }
 
 /** Single approved career by id -- used by solo mode to judge an answer

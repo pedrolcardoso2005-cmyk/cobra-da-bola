@@ -4,7 +4,7 @@ import { answersMatch, generateRoomCode, REVEAL_WORD_MS, type CareerQuestion, ty
 import { applyAction, EngineError } from "./engine.js";
 import { createInitialMatch } from "./match.js";
 import type { EngineAction } from "./actions.js";
-import { insertQuestionConsumption, pickRandomCareerQuestion, pickRandomQuestion } from "../db/questions.js";
+import { insertQuestionConsumption, markSeen, pickRandomCareerQuestion, pickRandomQuestion } from "../db/questions.js";
 import { persistFinishedMatch } from "../db/matches.js";
 
 export class RoomRuntime {
@@ -384,35 +384,42 @@ class RoomManager extends EventEmitter {
     const room = this.mustGet(code);
     this.snapshot(room);
     const { match } = room;
+    const userIds = match.players.map((p) => p.userId);
     if (match.phase === "phase1") {
       const q = pickRandomQuestion({
         categories: match.settings.categories,
         difficulties: match.settings.difficulties,
         excludeIds: match.phase1!.usedQuestionIds,
+        avoidSeenBy: userIds,
       });
       if (!q) throw new EngineError("Nao ha mais perguntas disponiveis com esses filtros");
       insertQuestionConsumption(q.category, q.difficulty, q.id);
       room.questionCache.set(q.id, q);
+      markSeen(userIds, "q", q.id);
       this.dispatch(room, { type: "RELEASE_PHASE1_QUESTION", question: q, now: Date.now() });
     } else if (match.phase === "semifinal" || match.phase === "final") {
       const q = pickRandomQuestion({
         categories: match.settings.categories,
         difficulties: match.settings.difficulties,
         excludeIds: match.bracketRound?.usedQuestionIds ?? [],
+        avoidSeenBy: userIds,
       });
       if (!q) throw new EngineError("Nao ha mais perguntas disponiveis com esses filtros");
       insertQuestionConsumption(q.category, q.difficulty, q.id);
       room.questionCache.set(q.id, q);
+      markSeen(userIds, "q", q.id);
       this.dispatch(room, { type: "RELEASE_BRACKET_QUESTION", question: q, now: Date.now() });
     } else if (match.phase === "career") {
       const c = pickRandomCareerQuestion({
         themes: match.settings.careerThemes ?? [],
         difficulties: match.settings.difficulties,
         excludeIds: room.usedCareerQuestionIds,
+        avoidSeenBy: userIds,
       });
       if (!c) throw new EngineError("Nao ha mais carreiras disponiveis no banco de perguntas");
       room.usedCareerQuestionIds.push(c.id);
       room.careerCache.set(c.id, c);
+      markSeen(userIds, "c", c.id);
       this.dispatch(room, { type: "RELEASE_CAREER_QUESTION", careerQuestion: c });
     } else {
       throw new EngineError("Fase atual nao aceita liberar pergunta");

@@ -170,3 +170,35 @@ describe("nome das equipes, ordem e pergunta parando onde apertou", () => {
     assert.equal(activeBuzz(room.match)!.frozenWordCount, 3);
   });
 });
+
+describe("perguntas nao repetem entre partidas", () => {
+  it("quem ja viu uma pergunta nao recebe de novo enquanto houver outras", async () => {
+    const { pickRandomQuestion, markSeen, listQuestions } = await import("../src/db/questions.js");
+    const all = listQuestions();
+    const keep = all[0].id;
+    // jogador ja viu todas menos uma
+    for (const q of all) if (q.id !== keep) markSeen(["fulano"], "q", q.id, 1000);
+    for (let i = 0; i < 5; i++) {
+      const q = pickRandomQuestion({ categories: ["aleatorio"], difficulties: [], excludeIds: [], avoidSeenBy: ["fulano", "outro"] });
+      assert.equal(q?.id, keep);
+    }
+    // viu tudo: volta a sortear, mas entre as vistas ha mais tempo
+    markSeen(["fulano"], "q", keep, 5000);
+    const again = pickRandomQuestion({ categories: ["aleatorio"], difficulties: [], excludeIds: [], avoidSeenBy: ["fulano"] });
+    assert.ok(again);
+    assert.notEqual(again!.id, keep, "a vista mais recente fica por ultimo");
+  });
+
+  it("a sala marca como vista para todos os jogadores", async () => {
+    const { pickRandomQuestion } = await import("../src/db/questions.js");
+    const room = roomManager.createRoom("seen-room", settings(2));
+    join(room.match.code, 2);
+    const qid = room.match.bracketRound?.currentQuestionId ?? room.match.phase1?.currentQuestionId;
+    assert.ok(qid);
+    const users = room.match.players.map((p) => p.userId);
+    for (let i = 0; i < 30; i++) {
+      const q = pickRandomQuestion({ categories: ["aleatorio"], difficulties: [], excludeIds: [], avoidSeenBy: users });
+      assert.notEqual(q?.id, qid);
+    }
+  });
+});

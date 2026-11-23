@@ -66,7 +66,7 @@ export interface ClientToServerEvents {
 
 /** Events the server pushes to clients. */
 export interface ServerToClientEvents {
-  "room:state": (payload: { match: MatchState }) => void;
+  "room:state": (payload: { match: MatchState; serverNow?: number }) => void;
   /** Public view of the current question/career clubs, safe for screen and players. */
   "room:question": (payload: {
     question: PublicQuestion | null;

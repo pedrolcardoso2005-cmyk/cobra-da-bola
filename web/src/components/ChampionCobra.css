@@ -1,0 +1,85 @@
+.cobra-champ {
+  position: relative;
+  width: min(78vw, 340px);
+  filter: drop-shadow(0 0 28px rgba(212, 240, 0, 0.55));
+}
+
+.cobra-champ__svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  overflow: visible;
+}
+
+/* Balanco de serpente, com bote periodico para frente. */
+.cobra-champ__strike {
+  transform-origin: 150px 300px;
+  animation: cobra-sway 2.4s ease-in-out infinite;
+}
+@keyframes cobra-sway {
+  0% { transform: rotate(-7deg); }
+  20% { transform: rotate(7deg); }
+  40% { transform: rotate(-7deg); }
+  55% { transform: rotate(0deg) translateY(10px) scale(0.96); }
+  62% { transform: rotate(0deg) translateY(-26px) scale(1.14); }
+  72% { transform: rotate(0deg) translateY(0) scale(1); }
+  100% { transform: rotate(-7deg); }
+}
+
+/* Capelo abrindo e fechando. */
+.cobra-champ__hood {
+  transform-origin: 150px 130px;
+  animation: cobra-hood 1.2s ease-in-out infinite;
+}
+@keyframes cobra-hood {
+  0%, 100% { transform: scaleX(1); }
+  50% { transform: scaleX(1.12); }
+}
+
+/* Olhos pulsando em vermelho. */
+.cobra-champ__eyes {
+  animation: cobra-eyes 0.9s ease-in-out infinite;
+}
+@keyframes cobra-eyes {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.65; }
+}
+
+.cobra-champ__tongue {
+  transform-origin: 150px 135px;
+  animation: cobra-tongue 0.6s steps(2, end) infinite;
+}
+@keyframes cobra-tongue {
+  0% { transform: scaleY(0.2); }
+  50% { transform: scaleY(1); }
+  100% { transform: scaleY(0.2); }
+}
+
+.cobra-champ__crown {
+  transform-origin: 150px 50px;
+  animation: cobra-crown 1.2s ease-in-out infinite;
+}
+@keyframes cobra-crown {
+  0%, 100% { transform: rotate(-6deg) translateY(0); }
+  50% { transform: rotate(6deg) translateY(-6px); }
+}
+
+.cobra-champ__ball {
+  transform-origin: 252px 318px;
+  animation: cobra-ball 0.8s ease-in-out infinite;
+}
+@keyframes cobra-ball {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  50% { transform: translateY(-18px) rotate(180deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cobra-champ__strike,
+  .cobra-champ__hood,
+  .cobra-champ__eyes,
+  .cobra-champ__tongue,
+  .cobra-champ__crown,
+  .cobra-champ__ball {
+    animation: none;
+  }
+}
