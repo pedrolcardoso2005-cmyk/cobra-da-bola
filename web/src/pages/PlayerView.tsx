@@ -3,6 +3,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { useRoom } from "../state/useRoom";
 import { useAuth } from "../state/AuthContext";
 import { PlayerButton } from "../components/PlayerButton";
+import "../components/CareerBoard.css";
 import { BracketControls, CareerControls, Phase1Controls } from "../components/HostControls";
 import { sfx } from "../sound/sfx";
 import { REVEAL_WORD_MS } from "@cobra/shared";
@@ -151,6 +152,10 @@ export default function PlayerView() {
   }
 
   const canAnswer = playerView.canSubmitAnswer;
+  // Na fase de carreiras nao existe pergunta de texto: o "item" em disputa e
+  // a carreira atual. Sem isso o botao RESPONDER nao fazia nada nessa fase.
+  const careerId = match.phase === "career" ? match.career?.careerQuestionId ?? null : null;
+  const currentItemId = playerView.currentQuestion?.id ?? careerId;
 
   return (
     <div className="player-view">
@@ -207,12 +212,26 @@ export default function PlayerView() {
           </div>
         )}
 
+        {careerId && (careerClubs?.length ?? 0) > 0 && (
+          <div className="player-answer">
+            <p className="player-answer__question">De quem e essa carreira?</p>
+            <div className="career-board__clubs">
+              {careerClubs!.map((club, i) => (
+                <div key={i} className="career-club sticker-sm is-revealed">
+                  <span className="font-display">{club}</span>
+                </div>
+              ))}
+            </div>
+            <p className="player-view__note">Sabe quem e? Aperte RESPONDER antes de revelarem o proximo clube.</p>
+          </div>
+        )}
+
         <PlayerButton
           state={playerView.myButtonState}
           buzzedOtherName={buzzedOtherName(match, playerView.myButtonState)}
           teamLabel={team ?? undefined}
           onPress={() => {
-            if (playerView.currentQuestion) actions.buzz(playerView.currentQuestion.id);
+            if (currentItemId) actions.buzz(currentItemId);
           }}
         />
 
@@ -221,8 +240,8 @@ export default function PlayerView() {
             className="player-answer"
             onSubmit={(e) => {
               e.preventDefault();
-              if (!answer.trim() || !playerView.currentQuestion) return;
-              actions.submitAnswer(playerView.currentQuestion.id, answer.trim());
+              if (!answer.trim() || !currentItemId) return;
+              actions.submitAnswer(currentItemId, answer.trim());
             }}
           >
             {playerView.myTimerSecondsLeft != null && (
