@@ -433,11 +433,31 @@ function lastSeenBy(userIds: string[], kind: "q" | "c"): Map<string, number> {
   return out;
 }
 
+const normText = (s: string) =>
+  s
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9 ]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+
+/** "Molde" da pergunta: o comeco do texto sem numeros. "Qual clube foi
+ * campeao brasileiro em 1993?" e "...em 2018?" tem o mesmo molde. */
+export function questionTemplate(prompt: string): string {
+  return normText(prompt.replace(/\d+/g, " ")).split(" ").slice(0, 6).join(" ");
+}
+
 /** Sorteia evitando o que os jogadores ja viram; se ja viram tudo, sorteia
- * entre os vistos ha mais tempo. */
-function pickFresh<T extends { id: string }>(pool: T[], seen: Map<string, number>): T | null {
+ * entre os vistos ha mais tempo. `prefer` (opcional) da preferencia, entre
+ * os nao vistos, a quem passa no filtro (ex.: molde/resposta diferentes). */
+function pickFresh<T extends { id: string }>(pool: T[], seen: Map<string, number>, prefer?: (x: T) => boolean): T | null {
   if (pool.length === 0) return null;
   const fresh = pool.filter((x) => !seen.has(x.id));
+  if (prefer) {
+    const best = fresh.filter(prefer);
+    if (best.length > 0) return best[Math.floor(Math.random() * best.length)];
+  }
   if (fresh.length > 0) return fresh[Math.floor(Math.random() * fresh.length)];
   const oldest = [...pool].sort((a, b) => (seen.get(a.id) ?? 0) - (seen.get(b.id) ?? 0)).slice(0, Math.max(1, Math.ceil(pool.length / 10)));
   return oldest[Math.floor(Math.random() * oldest.length)];
@@ -449,6 +469,9 @@ export function pickRandomQuestion(opts: {
   excludeIds: string[];
   /** Jogadores cujas perguntas ja vistas devem ser evitadas. */
   avoidSeenBy?: string[];
+  /** Ultimas perguntas da partida: evita mesmo molde e mesma resposta em
+   * sequencia, para variar. */
+  recent?: Question[];
 }): Question | null {
   const wantsRandomCategory = opts.categories.length === 0 || opts.categories.includes("aleatorio");
   const all = listQuestions();
@@ -458,7 +481,11 @@ export function pickRandomQuestion(opts: {
     if (opts.difficulties.length > 0 && !opts.difficulties.includes(q.difficulty)) return false;
     return true;
   });
-  return pickFresh(pool, lastSeenBy(opts.avoidSeenBy ?? [], "q"));
+  const recent = (opts.recent ?? []).slice(-12);
+  const recentTemplates = new Set(recent.map((q) => questionTemplate(q.prompt)));
+  const recentAnswers = new Set(recent.slice(-6).map((q) => normText(q.correctAnswer)));
+  const varied = (q: Question) => !recentTemplates.has(questionTemplate(q.prompt)) && !recentAnswers.has(normText(q.correctAnswer));
+  return pickFresh(pool, lastSeenBy(opts.avoidSeenBy ?? [], "q"), recent.length ? varied : undefined);
 }
 
 /** Single approved question by id -- used by solo mode to judge an answer
@@ -561,6 +588,10 @@ export function insertBankCareer(id: string, c: Omit<CareerQuestion, "id">): "in
     c.seasonRef ?? null,
   );
   return "inserted";
+}
+
+export function setCareerDifficulty(id: string, difficulty: Difficulty): void {
+  db.prepare("UPDATE career_questions SET difficulty = ? WHERE id = ? AND (difficulty IS NULL OR difficulty != ?)").run(difficulty, id, difficulty);
 }
 
 /** No status filter given -> only "approved", same convention as

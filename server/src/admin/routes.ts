@@ -2,6 +2,7 @@
 // actually using the game. Only reachable by admins (ADMIN_EMAILS or
 // users.is_admin=1).
 import { Router } from "express";
+import { nanoid } from "nanoid";
 import { db } from "../db/db.js";
 import { requireAdmin, requireAuth } from "../auth/routes.js";
 import { roomManager } from "../game/rooms.js";
@@ -69,6 +70,18 @@ export function buildAdminSummary() {
     ).map((u) => ({ nome: u.display_name, email: u.email, criadoEm: u.created_at })),
   };
 }
+
+/** Admin gera um link de nova senha para alguem que esqueceu (para mandar
+ * por WhatsApp, sem depender de e-mail). Vale 24 horas. */
+adminRouter.post("/link-senha", (req, res) => {
+  const email = String(req.body?.email ?? "").trim().toLowerCase();
+  const user = db.prepare("SELECT id, email FROM users WHERE email = ?").get(email) as unknown as { id: string; email: string } | undefined;
+  if (!user) return res.status(404).json({ error: "Nenhuma conta com esse e-mail" });
+  const token = nanoid(32);
+  db.prepare("INSERT INTO password_resets (token, user_id, expires_at) VALUES (?, ?, ?)").run(token, user.id, Date.now() + 24 * 60 * 60_000);
+  const base = process.env.FRONTEND_URL || process.env.PUBLIC_URL || "https://www.cobradabola.com.br";
+  res.json({ url: `${base.replace(/\/$/, "")}/redefinir-senha?token=${token}` });
+});
 
 adminRouter.get("/resumo", (_req, res) => {
   res.json(buildAdminSummary());

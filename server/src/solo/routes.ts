@@ -8,6 +8,7 @@ import { Router } from "express";
 import { z } from "zod";
 import { answersMatch } from "@cobra/shared";
 import { requireAuth } from "../auth/routes.js";
+import { careerDifficultyForRound } from "../questions/careers/difficulty.js";
 import {
   getApprovedCareerById,
   getApprovedQuestionById,
@@ -45,7 +46,8 @@ soloRouter.get("/pergunta", requireAuth, (req: any, res) => {
   // Sem filtro de tema/dificuldade: sorteia do banco inteiro, evitando o
   // que este jogador ja viu (em qualquer partida ou no Modo Solo).
   const excludeIds = csv(req.query.excludeIds);
-  const q = pickRandomQuestion({ categories: ["aleatorio"], difficulties: [], excludeIds, avoidSeenBy: [req.user.id] });
+  const recent = excludeIds.map((id) => getApprovedQuestionById(id)).filter((x): x is NonNullable<typeof x> => !!x);
+  const q = pickRandomQuestion({ categories: ["aleatorio"], difficulties: [], excludeIds, avoidSeenBy: [req.user.id], recent });
   if (q) markSeen([req.user.id], "q", q.id);
   res.json({ question: q ? toPublicQuestion(q) : null });
 });
@@ -79,7 +81,11 @@ soloRouter.post("/pergunta/pular", requireAuth, (req: any, res) => {
 
 soloRouter.get("/carreira", requireAuth, (req: any, res) => {
   const excludeIds = csv(req.query.excludeIds);
-  const c = pickRandomCareerQuestion({ themes: ["aleatorio"], difficulties: [], excludeIds, avoidSeenBy: [req.user.id] });
+  // Alterna facil, medio, facil, dificil ao longo da sessao.
+  const base = { themes: ["aleatorio" as const], excludeIds, avoidSeenBy: [req.user.id] };
+  const c =
+    pickRandomCareerQuestion({ ...base, difficulties: [careerDifficultyForRound(excludeIds.length)] }) ??
+    pickRandomCareerQuestion({ ...base, difficulties: [] });
   if (c) markSeen([req.user.id], "c", c.id);
   res.json({ career: c ? toPublicCareer(c) : null });
 });

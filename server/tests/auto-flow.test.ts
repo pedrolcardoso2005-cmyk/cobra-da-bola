@@ -202,3 +202,49 @@ describe("perguntas nao repetem entre partidas", () => {
     }
   });
 });
+
+describe("correcoes de 23/11 (noite)", () => {
+  it("carreiras alternam facil, medio, facil, dificil", async () => {
+    const { careerDifficultyForRound, careerDifficulty } = await import("../src/questions/careers/difficulty.js");
+    const { listCareerQuestions } = await import("../src/db/questions.js");
+    assert.deepEqual([0, 1, 2, 3, 4].map(careerDifficultyForRound), ["facil", "medio", "facil", "dificil", "facil"]);
+    assert.equal(careerDifficulty("Kylian Mbappe"), "facil");
+    const all = listCareerQuestions();
+    for (const d of ["facil", "medio", "dificil"]) assert.ok(all.filter((c) => c.difficulty === d).length >= 50, `poucas carreiras ${d}`);
+    const room = roomManager.createRoom("car-dif", settings(3));
+    join(room.match.code, 3);
+    assert.equal(room.match.phase, "career");
+    const first = room.careerCache.get(room.match.career!.careerQuestionId!)!;
+    assert.equal(first.difficulty, "facil", "a primeira carreira e facil");
+  });
+
+  it("nao repete molde nem resposta em sequencia", async () => {
+    const { pickRandomQuestion, listQuestions, questionTemplate } = await import("../src/db/questions.js");
+    const all = listQuestions();
+    const brasileirao = all.filter((q) => questionTemplate(q.prompt) === questionTemplate("Qual clube foi campeao brasileiro em 1993?"));
+    assert.ok(brasileirao.length >= 3, "o banco tem varias do mesmo molde");
+    for (let i = 0; i < 40; i++) {
+      const q = pickRandomQuestion({ categories: ["aleatorio"], difficulties: [], excludeIds: [], recent: [brasileirao[0]] });
+      assert.notEqual(questionTemplate(q!.prompt), questionTemplate(brasileirao[0].prompt));
+      assert.notEqual(q!.correctAnswer.toLowerCase(), brasileirao[0].correctAnswer.toLowerCase());
+    }
+  });
+
+  it("queda de conexao na sala de espera: 60 s para voltar", async () => {
+    RM.LOBBY_GRACE_MS = 40;
+    const room = roomManager.createRoom("grace", { ...settings(4), kind: "casual" as const });
+    const code = room.match.code;
+    const p1 = roomManager.addOrReconnectPlayer(code, { userId: "g1", displayName: "G1", avatarUrl: null });
+    roomManager.addOrReconnectPlayer(code, { userId: "g2", displayName: "G2", avatarUrl: null });
+    const pid = typeof p1 === "string" ? p1 : (p1 as any).playerId ?? room.match.players[0].id;
+    roomManager.markDisconnected(code, pid);
+    assert.equal(room.match.players.length, 2, "nao sai na hora");
+    roomManager.addOrReconnectPlayer(code, { userId: "g1", displayName: "G1", avatarUrl: null });
+    await sleep(80);
+    assert.equal(room.match.players.length, 2, "voltou a tempo, continua na sala");
+    const g2 = room.match.players.find((p) => p.userId === "g2")!;
+    roomManager.markDisconnected(code, g2.id);
+    await sleep(80);
+    assert.equal(room.match.players.length, 1, "nao voltou: vaga liberada");
+  });
+});

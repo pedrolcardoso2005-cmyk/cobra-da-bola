@@ -59,10 +59,27 @@ export function useRoom(code: string | undefined, role: RoomRole) {
     socket.on("error", onError);
     socket.on("room:kicked", onKicked);
 
-    socket.emit("room:join", { code, role }, (res) => {
-      if (res.ok) setJoined(true);
-      else setError(res.error);
-    });
+    // Entra na sala agora e de novo a cada reconexao: quando o celular
+    // perde a conexao um instante (tela bloqueada, troca de app, sinal
+    // ruim) o socket volta sozinho, mas precisa reentrar na sala para
+    // continuar recebendo o jogo.
+    const join = () =>
+      socket.emit("room:join", { code, role }, (res) => {
+        if (res.ok) {
+          setJoined(true);
+          setError((cur) => (cur && cur.startsWith("Conexao") ? null : cur));
+        } else setError(res.error);
+      });
+    if (socket.connected) join();
+    socket.on("connect", join);
+    function onDisconnect() {
+      setNotice("Conexao instavel... reconectando");
+    }
+    function onReconnected() {
+      setNotice(null);
+    }
+    socket.on("disconnect", onDisconnect);
+    socket.on("connect", onReconnected);
 
     return () => {
       socket.off("room:state", onState);
@@ -71,6 +88,9 @@ export function useRoom(code: string | undefined, role: RoomRole) {
       socket.off("player:view", onPlayerView);
       socket.off("error", onError);
       socket.off("room:kicked", onKicked);
+      socket.off("connect", join);
+      socket.off("disconnect", onDisconnect);
+      socket.off("connect", onReconnected);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [code, role]);

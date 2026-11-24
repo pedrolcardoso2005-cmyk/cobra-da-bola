@@ -1,3 +1,4 @@
+import { PasswordInput } from "../components/PasswordInput";
 import { useState, type FormEvent } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../state/AuthContext";
@@ -38,11 +39,11 @@ export default function Register() {
           </div>
           <div className="field">
             <label htmlFor="email">E-mail</label>
-            <input id="email" type="email" required value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="email" />
+            <input id="email" name="email" type="email" inputMode="email" autoCapitalize="none" autoCorrect="off" spellCheck={false} required value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="username" />
           </div>
           <div className="field">
             <label htmlFor="password">Senha (minimo 8 caracteres)</label>
-            <input id="password" type="password" required minLength={8} value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="new-password" />
+            <PasswordInput id="password" value={password} onChange={setPassword} autoComplete="new-password" minLength={8} />
           </div>
           {error && <span className="error-text">{error}</span>}
           <button className="btn btn-primary btn-block" type="submit" disabled={loading}>

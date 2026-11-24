@@ -48,6 +48,43 @@ function VisitChart({ dias }: { dias: { dia: string; visitantes: number }[] }) {
   );
 }
 
+function ResetLink() {
+  const [email, setEmail] = useState("");
+  const [url, setUrl] = useState<string | null>(null);
+  const [err, setErr] = useState<string | null>(null);
+  return (
+    <section className="panel sticker home-card">
+      <h2 className="font-display">Alguem esqueceu a senha?</h2>
+      <p>Digite o e-mail da pessoa, gere o link e mande por WhatsApp. Vale 24 horas.</p>
+      <form
+        className="row"
+        style={{ gap: 8, flexWrap: "wrap" }}
+        onSubmit={async (e) => {
+          e.preventDefault();
+          setErr(null);
+          setUrl(null);
+          try {
+            const r = await api.post<{ url: string }>("/api/admin/link-senha", { email });
+            setUrl(r.url);
+          } catch (e2) {
+            setErr(e2 instanceof Error ? e2.message : "Erro");
+          }
+        }}
+      >
+        <input type="email" placeholder="email@da.pessoa" value={email} onChange={(e) => setEmail(e.target.value)} required style={{ flex: 1, minWidth: 220 }} />
+        <button className="btn btn-primary" type="submit">Gerar link</button>
+      </form>
+      {err && <p className="error-text">{err}</p>}
+      {url && (
+        <p style={{ wordBreak: "break-all" }}>
+          <strong>{url}</strong>{" "}
+          <button type="button" className="btn btn-ghost" onClick={() => navigator.clipboard?.writeText(url)}>Copiar</button>
+        </p>
+      )}
+    </section>
+  );
+}
+
 export default function Admin() {
   const { user } = useAuth();
   const [data, setData] = useState<AdminSummary | null>(null);
@@ -143,6 +180,7 @@ export default function Admin() {
               </tbody>
             </table>
           </section>
+          <ResetLink />
           <p style={{ fontSize: "0.8rem", color: "var(--giz-dim)" }}>
             Atualiza sozinho a cada 15 s. "Online agora" e "salas" zeram quando o site e reiniciado.
           </p>

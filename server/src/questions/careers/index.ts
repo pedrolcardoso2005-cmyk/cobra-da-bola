@@ -5,7 +5,8 @@
 //
 // Clubs are the player's main senior clubs, in career order (loans and
 // very short spells are often left out).
-import { insertBankCareer } from "../../db/questions.js";
+import { insertBankCareer, setCareerDifficulty } from "../../db/questions.js";
+import { careerDifficulty } from "./difficulty.js";
 import type { CareerTheme } from "@cobra/shared";
 import { careers001 } from "./careers-001.js";
 import { careers002 } from "./careers-002.js";
@@ -48,7 +49,11 @@ export function loadCareerBank(): { inserted: number; skipped: number; total: nu
     if (seen.has(slug)) throw new Error(`Jogador duplicado no banco de carreiras: ${entry.playerName}`);
     seen.add(slug);
     if (entry.clubs.length < 2) throw new Error(`Carreira com menos de 2 clubes: ${entry.playerName}`);
-    const result = insertBankCareer(slug, entry);
+    const difficulty = careerDifficulty(entry.playerName);
+    const result = insertBankCareer(slug, { ...entry, difficulty });
+    // Carreiras que ja estavam no banco (antes de ter dificuldade) tambem
+    // recebem a classificacao.
+    if (result === "skipped") setCareerDifficulty(slug, difficulty);
     if (result === "inserted") inserted++;
     else skipped++;
   }

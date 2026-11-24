@@ -1,9 +1,10 @@
 import { EventEmitter } from "node:events";
 import { nanoid } from "nanoid";
-import { answersMatch, generateRoomCode, REVEAL_WORD_MS, type CareerQuestion, type MatchSettings, type MatchState, type Question, type TeamKey } from "@cobra/shared";
+import { answersMatch, generateRoomCode, REVEAL_WORD_MS, type CareerQuestion, type Difficulty, type MatchSettings, type MatchState, type Question, type TeamKey } from "@cobra/shared";
 import { applyAction, EngineError } from "./engine.js";
 import { createInitialMatch } from "./match.js";
 import type { EngineAction } from "./actions.js";
+import { careerDifficultyForRound } from "../questions/careers/difficulty.js";
 import { insertQuestionConsumption, markSeen, pickRandomCareerQuestion, pickRandomQuestion } from "../db/questions.js";
 import { persistFinishedMatch } from "../db/matches.js";
 
@@ -351,6 +352,24 @@ class RoomManager extends EventEmitter {
     this.dispatch(room, { type: "SET_CONNECTED", playerId, connected });
   }
 
+  static LOBBY_GRACE_MS = 60_000;
+
+  /** Conexao caiu. Na sala de espera, da 60 s para o celular voltar (tela
+   * bloqueada, troca de app, sinal ruim) antes de liberar a vaga. */
+  markDisconnected(code: string, playerId: string): void {
+    const room = this.rooms.get(code);
+    if (!room || !room.match.players.some((p) => p.id === playerId)) return;
+    this.setConnected(code, playerId, false);
+    if (room.match.phase !== "lobby") return;
+    const t = setTimeout(() => {
+      const r = this.rooms.get(code);
+      if (!r || r.match.phase !== "lobby") return;
+      const p = r.match.players.find((x) => x.id === playerId);
+      if (p && !p.connected) this.leavePlayer(code, playerId);
+    }, RoomManager.LOBBY_GRACE_MS);
+    t.unref?.();
+  }
+
   /** Voluntarily leaves the room pre-start, freeing the slot for someone else. */
   leavePlayer(code: string, playerId: string): void {
     const room = this.mustGet(code);
@@ -391,6 +410,7 @@ class RoomManager extends EventEmitter {
         difficulties: match.settings.difficulties,
         excludeIds: match.phase1!.usedQuestionIds,
         avoidSeenBy: userIds,
+        recent: recentQuestions(room),
       });
       if (!q) throw new EngineError("Nao ha mais perguntas disponiveis com esses filtros");
       insertQuestionConsumption(q.category, q.difficulty, q.id);
@@ -403,6 +423,7 @@ class RoomManager extends EventEmitter {
         difficulties: match.settings.difficulties,
         excludeIds: match.bracketRound?.usedQuestionIds ?? [],
         avoidSeenBy: userIds,
+        recent: recentQuestions(room),
       });
       if (!q) throw new EngineError("Nao ha mais perguntas disponiveis com esses filtros");
       insertQuestionConsumption(q.category, q.difficulty, q.id);
@@ -410,12 +431,8 @@ class RoomManager extends EventEmitter {
       markSeen(userIds, "q", q.id);
       this.dispatch(room, { type: "RELEASE_BRACKET_QUESTION", question: q, now: Date.now() });
     } else if (match.phase === "career") {
-      const c = pickRandomCareerQuestion({
-        themes: match.settings.careerThemes ?? [],
-        difficulties: match.settings.difficulties,
-        excludeIds: room.usedCareerQuestionIds,
-        avoidSeenBy: userIds,
-      });
+      const base = { themes: match.settings.careerThemes ?? [], excludeIds: room.usedCareerQuestionIds, avoidSeenBy: userIds };
+      const c = pickRandomCareerQuestion({ ...base, ...careerPick(room) }) ?? pickRandomCareerQuestion({ ...base, difficulties: [] });
       if (!c) throw new EngineError("Nao ha mais carreiras disponiveis no banco de perguntas");
       room.usedCareerQuestionIds.push(c.id);
       room.careerCache.set(c.id, c);
@@ -555,6 +572,17 @@ export function teamsProblem(match: MatchState): string | null {
     return `Equipes desequilibradas (${a} x ${b}). Com ${n} jogadores, deixe ${max} x ${n - max}.`;
   }
   return null;
+}
+
+/** Carreira da vez: facil, medio, facil, dificil... (com reserva caso nao
+ * haja nenhuma daquela dificuldade). */
+function careerPick(room: RoomRuntime): { difficulties: Difficulty[] } {
+  return { difficulties: [careerDifficultyForRound(room.usedCareerQuestionIds.length)] };
+}
+
+/** Perguntas ja usadas nesta partida, na ordem (para variar molde/resposta). */
+function recentQuestions(room: RoomRuntime): Question[] {
+  return [...room.questionCache.values()];
 }
 
 function currentBuzzOf(match: MatchState) {

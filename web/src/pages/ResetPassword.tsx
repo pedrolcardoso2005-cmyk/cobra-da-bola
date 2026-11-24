@@ -1,3 +1,4 @@
+import { PasswordInput } from "../components/PasswordInput";
 import { useState, type FormEvent } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { api, ApiError } from "../lib/api";
@@ -36,7 +37,7 @@ export default function ResetPassword() {
           <form onSubmit={onSubmit} className="stack">
             <div className="field">
               <label htmlFor="password">Nova senha</label>
-              <input id="password" type="password" required minLength={8} value={password} onChange={(e) => setPassword(e.target.value)} />
+              <PasswordInput id="password" value={password} onChange={setPassword} autoComplete="new-password" minLength={8} />
             </div>
             {error && <span className="error-text">{error}</span>}
             <button className="btn btn-primary btn-block" type="submit" disabled={loading || !token}>

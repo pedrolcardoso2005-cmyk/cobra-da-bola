@@ -164,14 +164,12 @@ export function registerSocketHandlers(io: Server<ClientToServerEvents, ServerTo
       matchmakingManager.removeSocket(socket.id);
       if (socket.data.code && socket.data.playerId) {
         try {
-          const room = roomManager.getRoom(socket.data.code);
-          if (room && room.match.phase === "lobby") {
-            // Still in the lobby: free the slot so someone else can take it,
-            // instead of leaving a permanently-reserved, never-connecting seat.
-            roomManager.leavePlayer(socket.data.code, socket.data.playerId);
-          } else {
-            roomManager.setConnected(socket.data.code, socket.data.playerId, false);
-          }
+          // So marca como desconectado se nenhuma outra conexao desse
+          // jogador continua na sala (ex.: reconectou antes do aviso chegar).
+          const stillHere = [...(io.sockets.adapter.rooms.get(`${socket.data.code}:player:${socket.data.playerId}`) ?? [])].some(
+            (id) => id !== socket.id,
+          );
+          if (!stillHere) roomManager.markDisconnected(socket.data.code, socket.data.playerId);
         } catch {
           /* room may already be gone */
         }
